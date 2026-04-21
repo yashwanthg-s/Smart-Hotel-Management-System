@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Live Orders | Smart Hotel</title>
+  <%- include('../partials/admin-header') %>
+  <style>
+    .kanban-col { min-height: 500px; padding: 15px; border-radius: 20px; transition: var(--transition); }
+    .order-card { 
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      transition: var(--transition);
+      cursor: default;
+    }
+    .order-card:hover { transform: translateY(-3px); background: rgba(255, 255, 255, 0.06); border-color: rgba(255,255,255,0.2); }
+    .col-header { 
+      font-weight: 700;
+      padding: 10px 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    @keyframes urgentPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(252,129,129,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(252,129,129,0); }
+    }  </style>
+</head>
+<body class="fade-in">
+  <!-- Animated Background -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <%- include('../partials/admin-navbar') %>
+
+  <div class="container-fluid px-4 mt-4">
+    <div class="row">
+      <!-- Sidebar: only show admin sidebar for admin role -->
+      <% if (user && user.role === 'admin') { %>
+        <%- include('../partials/admin-sidebar', { currentPage: 'orders' }) %>
+      <% } %>
+
+      <!-- Main content -->
+      <main class="<%= (user && user.role === 'admin') ? 'col-md-10' : 'col-12' %> py-2">
+        <div class="d-flex justify-content-between align-items-center mb-5 ps-3">
+          <div>
+            <h1 class="display-6">Orders Dashboard</h1>
+            <p class="text-secondary">Track and manage live kitchen orders in real-time</p>
+          </div>
+          <button class="btn btn-gradient px-4" data-bs-toggle="modal" data-bs-target="#qrScannerModal">
+            <i class="fas fa-qrcode me-2"></i> Scan QR Code
+          </button>
+        </div>
+
+        <!-- Kanban Board -->
+        <div class="row g-4 ps-3">
+          <!-- Pending Column -->
+          <div class="col-md-3">
+            <div class="col-header bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+              <span><i class="fas fa-clock me-2"></i> Pending</span>
+              <span class="badge glass text-warning"><%= orders.filter(o => o.status === 'pending').length %></span>
+            </div>
+            <div class="kanban-col glass">
+              <% const pendingOrders = orders.filter(o => o.status === 'pending'); %>
+              <% if (pendingOrders.length === 0) { %>
+                <div class="text-center py-5 opacity-25"><i class="fas fa-inbox fa-2x"></i></div>
+              <% } %>
+              <% pendingOrders.forEach(order => { %>
+                <%
+                  const pendingHasETA = order.userETA !== null && order.userETA !== undefined;
+                  const pendingUrgent = pendingHasETA && order.userETA <= order.estimatedPrepTime;
+                %>
+                <div class="order-card p-3 mb-3 border-top border-3 border-0 border-start-0 border-end-0 border-bottom-0"
+                  style="border-color:<%= pendingUrgent ? '#fc8181' : 'var(--bs-warning)' %> !important;">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-info small fw-bold">#<%= order.orderId %></span>
+                    <span class="text-secondary small"><%= new Date(order.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) %></span>
+                  </div>
+                  <h6 class="text-white mb-2"><i class="fas fa-user-circle me-1 opacity-50"></i> <%= order.userId ? order.userId.name : 'Guest' %></h6>
+                  <ul class="list-unstyled mb-2">
+                    <% order.items.forEach(item => { %>
+                      <li class="small text-white-50 mb-1">
+                        <span class="text-warning fw-bold"><%= item.quantity %>x</span> <%= item.name %>
+                      </li>
+                    <% }); %>
+                  </ul>
+                  <!-- ETA Alert on Pending -->
+                  <% if (pendingUrgent) { %>
+                    <div class="py-1 px-2 mb-2 text-center small rounded-3 fw-bold"
+                      style="background:rgba(252,129,129,0.2);color:#fc8181;border:1px solid rgba(252,129,129,0.4);">
+                      🚨 Customer ~<%= order.userETA %> min away! Accept now!
+                    </div>
+                  <% } else if (pendingHasETA) { %>
+                    <div class="py-1 px-2 mb-2 text-center small rounded-3"
+                      style="background:rgba(99,179,237,0.1);color:#63b3ed;">
+                      📍 Customer ~<%= order.userETA %> min away (<%= order.userDistance %> km)
+                    </div>
+                  <% } %>
+                  <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="fw-bold text-white">₹<%= order.totalPrice %></span>
+                    <button class="btn btn-glass btn-sm px-3 <%= pendingUrgent ? 'text-danger' : 'text-warning' %>"
+                      onclick="updateStatus('<%= order._id %>', 'received')">
+                      Accept <i class="fas fa-chevron-right ms-1"></i>
+                    </button>
+                  </div>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+
+          <!-- Received Column -->
+          <div class="col-md-3">
+            <div class="col-header bg-info bg-opacity-10 text-info border border-info border-opacity-25">
+              <span><i class="fas fa-inbox me-2"></i> Received</span>
+              <span class="badge glass text-info"><%= orders.filter(o => o.status === 'received').length %></span>
+            </div>
+            <div class="kanban-col glass">
+              <% const receivedOrders = orders.filter(o => o.status === 'received'); %>
+              <% if (receivedOrders.length === 0) { %>
+                <div class="text-center py-5 opacity-25"><i class="fas fa-inbox fa-2x"></i></div>
+              <% } %>
+              <% receivedOrders.forEach(order => { %>
+                <%
+                  // Logic:
+                  // - No ETA yet → ALLOW prepare (can't block kitchen indefinitely)
+                  // - ETA known AND eta > prepTime → LOCK (too early)
+                  // - ETA known AND eta <= prepTime → ALLOW + show urgent alert
+                  const hasETA = order.userETA !== null && order.userETA !== undefined;
+                  const etaTooEarly = hasETA && order.userETA > order.estimatedPrepTime;
+                  const canPrepare = !etaTooEarly; // allow if no ETA or ETA <= prepTime
+                  const minsUntilPrepare = hasETA ? Math.max(0, order.userETA - order.estimatedPrepTime) : null;
+                %>
+                <div class="order-card p-3 mb-3 border-top border-info border-3 border-0 border-start-0 border-end-0 border-bottom-0">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-info small fw-bold">#<%= order.orderId %></span>
+                    <span class="text-secondary small"><%= order.estimatedPrepTime %> min</span>
+                  </div>
+                  <h6 class="text-white mb-2"><%= order.userId ? order.userId.name : 'Guest' %></h6>
+                  <ul class="list-unstyled mb-2">
+                    <% order.items.forEach(item => { %>
+                      <li class="small text-white-50 mb-1">
+                        <span class="text-info fw-bold"><%= item.quantity %>x</span> <%= item.name %>
+                      </li>
+                    <% }); %>
+                  </ul>
+
+                  <!-- ETA Status -->
+                  <% if (hasETA) { %>
+                    <% if (!etaTooEarly) { %>
+                      <div class="py-1 px-2 mb-2 text-center small rounded-3 fw-bold"
+                        style="background:rgba(252,129,129,0.15);color:#fc8181;border:1px solid rgba(252,129,129,0.3);">
+                        🚨 Customer ~<%= order.userETA %> min away — Time to prepare!
+                      </div>
+                    <% } else { %>
+                      <div class="py-1 px-2 mb-2 text-center small rounded-3"
+                        style="background:rgba(99,179,237,0.1);color:#63b3ed;">
+                        ⏳ Customer ~<%= order.userETA %> min away
+                        <br><span style="font-size:0.72rem;color:#94a3b8;">Prepare in ~<%= minsUntilPrepare %> min</span>
+                      </div>
+                    <% } %>
+                  <% } else { %>
+                    <div class="py-1 px-2 mb-2 text-center small rounded-3"
+                      style="background:rgba(251,191,36,0.1);color:#fbbf24;">
+                      <i class="fas fa-info-circle me-1"></i> No ETA — prepare when ready
+                    </div>
+                  <% } %>
+
+                  <!-- Prepare Button: only show when ETA <= prep time -->
+                  <% if (canPrepare) { %>
+                    <button class="btn btn-glass btn-sm w-100 text-info" onclick="updateStatus('<%= order._id %>', 'preparing')">
+                      Prepare <i class="fas fa-fire ms-1"></i>
+                    </button>
+                  <% } else { %>
+                    <button class="btn btn-sm w-100" disabled
+                      style="background:rgba(255,255,255,0.04);color:#475569;border:1px solid rgba(255,255,255,0.08);border-radius:10px;cursor:not-allowed;">
+                      <i class="fas fa-lock me-1"></i> Waiting for customer...
+                    </button>
+                  <% } %>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+
+          <!-- Preparing Column -->
+          <div class="col-md-3">
+            <div class="col-header bg-purple bg-opacity-10 style="color:var(--accent-purple)" border border-purple border-opacity-25">
+              <span style="color:var(--accent-purple)"><i class="fas fa-fire me-2"></i> Preparing</span>
+              <span class="badge glass" style="color:var(--accent-purple)"><%= orders.filter(o => o.status === 'preparing').length %></span>
+            </div>
+            <div class="kanban-col glass">
+              <% const preparingOrders = orders.filter(o => o.status === 'preparing'); %>
+              <% if (preparingOrders.length === 0) { %>
+                <div class="text-center py-5 opacity-25"><i class="fas fa-inbox fa-2x"></i></div>
+              <% } %>
+              <% preparingOrders.forEach(order => { %>
+                <%
+                  const isUrgent = order.userETA !== null && order.userETA !== undefined && order.userETA <= order.estimatedPrepTime;
+                  const hasETA = order.userETA !== null && order.userETA !== undefined;
+                %>
+                <div class="order-card p-3 mb-3 border-top border-3 border-0 border-start-0 border-end-0 border-bottom-0"
+                  style="border-color: <%= isUrgent ? '#fc8181' : 'var(--accent-purple)' %> !important;
+                  <%= isUrgent ? 'animation: urgentPulse 1s infinite;' : '' %>">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="small fw-bold" style="color:<%= isUrgent ? '#fc8181' : 'var(--accent-purple)' %>">#<%= order.orderId %></span>
+                    <span class="text-secondary small">Est: <%= order.estimatedPrepTime %>m</span>
+                  </div>
+                  <h6 class="text-white mb-2"><%= order.userId ? order.userId.name : 'Guest' %></h6>
+                  <ul class="list-unstyled mb-2">
+                    <% order.items.forEach(item => { %>
+                      <li class="small text-white-50 mb-1">
+                        <span style="color:var(--accent-purple)" class="fw-bold"><%= item.quantity %>x</span> <%= item.name %>
+                      </li>
+                    <% }); %>
+                  </ul>
+                  <!-- ETA Alert -->
+                  <% if (isUrgent) { %>
+                    <div class="py-2 px-2 mb-2 text-center small fw-bold rounded-3"
+                      style="background:rgba(252,129,129,0.2);color:#fc8181;border:1px solid rgba(252,129,129,0.5);">
+                      🚨 Customer arriving in <%= order.userETA %> min — Hurry!
+                    </div>
+                  <% } else if (hasETA) { %>
+                    <div class="py-1 px-2 mb-2 text-center small rounded-3"
+                      style="background:rgba(104,211,145,0.1);color:#68d391;">
+                      📍 Customer ~<%= order.userETA %> min away
+                    </div>
+                  <% } %>
+                  <button class="btn btn-glass btn-sm w-100" style="color:<%= isUrgent ? '#fc8181' : 'var(--accent-purple)' %>" onclick="updateStatus('<%= order._id %>', 'ready')">
+                    Ready <i class="fas fa-bell ms-1"></i>
+                  </button>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+
+          <!-- Ready Column -->
+          <div class="col-md-3">
+            <div class="col-header bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+              <span><i class="fas fa-check-double me-2"></i> Ready</span>
+              <span class="badge glass text-success"><%= orders.filter(o => o.status === 'ready').length %></span>
+            </div>
+            <div class="kanban-col glass">
+              <% const readyOrders = orders.filter(o => o.status === 'ready'); %>
+              <% if (readyOrders.length === 0) { %>
+                <div class="text-center py-5 opacity-25"><i class="fas fa-inbox fa-2x"></i></div>
+              <% } %>
+              <% readyOrders.forEach(order => { %>
+                <div class="order-card p-3 mb-3 border-top border-success border-3 border-0 border-start-0 border-end-0 border-bottom-0">
+                  <div class="d-flex justify-content-between mb-2">
+                    <span class="text-success small fw-bold">#<%= order.orderId %></span>
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2">Ready</span>
+                  </div>
+                  <h6 class="text-white mb-2"><%= order.userId ? order.userId.name : 'Guest' %></h6>
+                  <ul class="list-unstyled mb-3">
+                    <% order.items.forEach(item => { %>
+                      <li class="small text-white-50 mb-1">
+                        <span class="text-success fw-bold"><%= item.quantity %>x</span> <%= item.name %>
+                      </li>
+                    <% }); %>
+                  </ul>
+                  <div class="alert glass-success py-2 px-3 mb-2 text-center small border border-success border-opacity-25">
+                    <i class="fas fa-qrcode me-1"></i> Ready for Collection
+                  </div>
+                  <% if (order.userId && order.userId.phone) { %>
+                    <%
+                      // Clean phone number - remove spaces, dashes, brackets
+                      const cleanPhone = order.userId.phone.replace(/[\s\-\(\)\+]/g, '');
+                    %>
+                    <a href="tel:+91<%= cleanPhone %>" class="btn btn-sm w-100 fw-bold d-flex align-items-center justify-content-center gap-2"
+                      style="background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:10px;padding:10px;text-decoration:none;">
+                      <i class="fas fa-phone-alt"></i>
+                      <span>Call <%= order.userId.name.split(' ')[0] %></span>
+                      <span class="opacity-75" style="font-size:0.75rem;">(<%= order.userId.phone %>)</span>
+                    </a>
+                  <% } else { %>
+                    <div class="text-center text-secondary small mt-1 py-2 glass rounded-3">
+                      <i class="fas fa-phone-slash me-1"></i> No phone number on file
+                    </div>
+                  <% } %>
+                </div>
+              <% }); %>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- QR Scanner Modal -->
+  <div class="modal fade" id="qrScannerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card overflow-hidden">
+        <div class="modal-header bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <h5 class="modal-title fw-bold text-white"><i class="fas fa-qrcode text-info me-2"></i> Verify QR Collection</h5>
+          <button type="button" class="btn btn-glass p-2 border-0" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="btn-group w-100 mb-4 glass rounded-3 p-1">
+            <button class="btn btn-glass active border-0" id="btnCamera" onclick="switchMode('camera')">Camera</button>
+            <button class="btn btn-glass border-0" id="btnManual" onclick="switchMode('manual')">Manual ID</button>
+          </div>
+          <div id="cameraSection" class="text-center">
+            <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;">
+              <video id="qrVideo" style="width:100%;height:280px;object-fit:cover;" autoplay playsinline muted></video>
+              <!-- Scan frame overlay -->
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+                <div style="width:200px;height:200px;border:3px solid #63b3ed;border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,0.4);"></div>
+              </div>
+            </div>
+            <canvas id="qrCanvas" style="display:none;"></canvas>
+            <p class="text-secondary small mt-2">Align QR code within the frame</p>
+          </div>
+          <div id="manualSection" style="display:none;" class="py-3">
+            <label class="form-label text-secondary small">Enter Order ID</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="qrInput" placeholder="ORD-XXXX-XXXX">
+              <button class="btn btn-gradient" onclick="verifyOrder(document.getElementById('qrInput').value)">Verify</button>
+            </div>
+          </div>
+          <div id="qrResult" class="mt-4"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script>
+    function updateStatus(orderId, newStatus) {
+      fetch(`/staff/orders/${orderId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      })
+      .then(res => res.json())
+      .then(data => { if (data.success) location.reload(); })
+      .catch(err => console.error(err));
+    }
+
+    let videoStream = null;
+    let scanLoop = null;
+    let scanHandled = false;
+
+    function verifyOrder(orderId) {
+      if (!orderId.trim() || scanHandled) return;
+      scanHandled = true;
+      stopCamera();
+
+      fetch('/staff/orders/verify-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderId.trim() })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const resultDiv = document.getElementById('qrResult');
+        if (data.success) {
+          resultDiv.innerHTML = `<div class="alert glass-success text-success border border-success border-opacity-25 rounded-3 p-3">
+            <i class="fas fa-check-circle me-2"></i><strong>Order Completed!</strong><br>
+            <small>${data.order.orderId}</small>
+          </div>`;
+          setTimeout(() => location.reload(), 1800);
+        } else if (data.alreadyUsed) {
+          resultDiv.innerHTML = `<div class="alert glass-warning text-warning border border-warning border-opacity-25 rounded-3 p-3">
+            <i class="fas fa-ban me-2"></i><strong>QR Already Used</strong><br>
+            <small>This order was already collected.</small>
+          </div>`;
+          scanHandled = false;
+        } else if (data.notReady) {
+          resultDiv.innerHTML = `<div class="alert glass text-info border border-info border-opacity-25 rounded-3 p-3">
+            <i class="fas fa-hourglass-half me-2"></i><strong>Not Ready Yet</strong><br>
+            <small>${data.error}</small>
+          </div>`;
+          scanHandled = false;
+        } else {
+          resultDiv.innerHTML = `<div class="alert glass-danger text-danger border border-danger border-opacity-25 rounded-3 p-3">
+            <i class="fas fa-times-circle me-2"></i> ${data.error || 'Order not found'}
+          </div>`;
+          scanHandled = false;
+        }
+      })
+      .catch(() => {
+        document.getElementById('qrResult').innerHTML = `<div class="alert glass-danger text-danger">Error verifying QR</div>`;
+        scanHandled = false;
+      });
+    }
+
+    function switchMode(mode) {
+      document.getElementById('cameraSection').style.display = mode === 'camera' ? 'block' : 'none';
+      document.getElementById('manualSection').style.display = mode === 'manual' ? 'block' : 'none';
+      document.getElementById('btnCamera').classList.toggle('active', mode === 'camera');
+      document.getElementById('btnManual').classList.toggle('active', mode === 'manual');
+      if (mode === 'camera') startCamera(); else stopCamera();
+    }
+
+    async function startCamera() {
+      scanHandled = false;
+      document.getElementById('qrResult').innerHTML = '';
+      const video = document.getElementById('qrVideo');
+      const canvas = document.getElementById('qrCanvas');
+
+      try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        video.srcObject = videoStream;
+        video.play();
+
+        // Start scanning frames
+        scanLoop = setInterval(() => {
+          if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code && code.data) {
+            verifyOrder(code.data);
+          }
+        }, 200);
+      } catch (err) {
+        console.error('Camera error:', err);
+        document.getElementById('qrResult').innerHTML = `<div class="alert glass text-warning border border-warning border-opacity-25 rounded-3 p-3">
+          <i class="fas fa-exclamation-triangle me-2"></i> Camera not available. Use Manual ID instead.
+        </div>`;
+        switchMode('manual');
+      }
+    }
+
+    function stopCamera() {
+      if (scanLoop) { clearInterval(scanLoop); scanLoop = null; }
+      if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+      }
+      const video = document.getElementById('qrVideo');
+      if (video) video.srcObject = null;
+    }
+
+    document.getElementById('qrInput') && document.getElementById('qrInput').addEventListener('keypress', e => {
+      if (e.key === 'Enter') verifyOrder(e.target.value);
+    });
+
+    document.getElementById('qrScannerModal').addEventListener('shown.bs.modal', startCamera);
+    document.getElementById('qrScannerModal').addEventListener('hidden.bs.modal', () => {
+      stopCamera();
+      scanHandled = false;
+      document.getElementById('qrResult').innerHTML = '';
+      const inp = document.getElementById('qrInput');
+      if (inp) inp.value = '';
+    });
+
+    // Auto-refresh every 30 seconds to catch ETA updates
+    setTimeout(() => location.reload(), 30000);
+
+    // Also poll for ETA changes every 15 seconds and reload if changed
+    let lastETASnapshot = '';
+    const staffHotelId = '<%= orders.length > 0 ? orders[0].hotelId : "" %>';
+    setInterval(async () => {
+      try {
+        const res = await fetch(`/api/orders/eta-snapshot?hotelId=${staffHotelId}`);
+        const data = await res.json();
+        const snapshot = JSON.stringify(data);
+        if (lastETASnapshot && snapshot !== lastETASnapshot) {
+          location.reload();
+        }
+        lastETASnapshot = snapshot;
+      } catch(e) {}
+    }, 15000);
+  </script>
+</body>
+</html>

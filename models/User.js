@@ -1,0 +1,71 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+    lowercase: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  phone: String,
+  role: {
+    type: String,
+    enum: ['superadmin', 'admin', 'staff', 'user'],
+    default: 'user'
+  },
+  // For admin/staff - which hotel they belong to
+  hotelId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hotel',
+    default: null
+  },
+  // For staff - their department
+  department: {
+    type: String,
+    validate: {
+      validator: function(v) {
+        if (v === null || v === undefined || v === '') return true;
+        return ['kitchen', 'reception', 'housekeeping', 'waiter'].includes(v);
+      },
+      message: 'Invalid department'
+    },
+    default: null
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Method to compare passwords
+userSchema.methods.comparePassword = async function(enteredPassword) {
+  return await bcrypt.compare(enteredPassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);

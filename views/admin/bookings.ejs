@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Room Bookings | Admin</title>
+  <%- include('../partials/admin-header') %>
+</head>
+<body class="fade-in">
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <%- include('../partials/admin-navbar') %>
+  <div class="container-fluid px-4 mt-4">
+    <div class="row">
+      <%- include('../partials/admin-sidebar', { currentPage: 'bookings' }) %>
+      <main class="col-md-10 py-2">
+        <div class="d-flex justify-content-between align-items-center mb-5 ps-3">
+          <div>
+            <h1 class="display-6">Room Bookings</h1>
+            <p class="text-secondary">All room reservations for your hotel</p>
+          </div>
+          <div class="d-flex gap-3">
+            <div class="glass-card px-4 py-2 text-center">
+              <div class="fw-bold fs-5" style="color:#63b3ed;"><%= bookings.filter(b=>b.status==='confirmed').length %></div>
+              <div class="text-secondary small">Confirmed</div>
+            </div>
+            <div class="glass-card px-4 py-2 text-center">
+              <div class="fw-bold fs-5" style="color:#68d391;"><%= bookings.filter(b=>b.status==='checked-in').length %></div>
+              <div class="text-secondary small">Checked In</div>
+            </div>
+            <div class="glass-card px-4 py-2 text-center">
+              <div class="fw-bold fs-5" style="color:#fbbf24;"><%= bookings.filter(b=>b.status==='pending').length %></div>
+              <div class="text-secondary small">Pending</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="d-flex gap-2 mb-4 ps-3">
+          <button class="btn btn-gradient px-4" onclick="filterBookings('all',this)">All</button>
+          <button class="btn btn-glass px-4" onclick="filterBookings('pending',this)">Pending</button>
+          <button class="btn btn-glass px-4" onclick="filterBookings('confirmed',this)">Confirmed</button>
+          <button class="btn btn-glass px-4" onclick="filterBookings('checked-in',this)">Checked In</button>
+          <button class="btn btn-glass px-4" onclick="filterBookings('checked-out',this)">Checked Out</button>
+        </div>
+
+        <div class="glass-card overflow-hidden ps-0 ms-3">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-4" style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Guest</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Room</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Check-in</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Check-out</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Nights</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Total</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Status</th>
+                  <th class="pe-4" style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% if (bookings.length === 0) { %>
+                  <tr><td colspan="8" class="text-center py-5 text-secondary">No bookings yet</td></tr>
+                <% } %>
+                <% bookings.forEach(b => { %>
+                  <tr class="booking-row" data-status="<%= b.status %>" style="border-bottom:1px solid rgba(255,255,255,0.07);">
+                    <td class="ps-4">
+                      <div class="fw-bold" style="color:#68d391;"><%= b.guestName || b.userId?.name || 'Guest' %></div>
+                      <div class="text-secondary small"><%= b.guestPhone || b.userId?.phone || '' %></div>
+                    </td>
+                    <td>
+                      <div style="color:#e2e8f0;"><%= b.roomId?.roomNumber || 'N/A' %></div>
+                      <div class="text-secondary small"><%= b.roomId?.roomType || '' %></div>
+                    </td>
+                    <td style="color:#e2e8f0;"><%= new Date(b.checkInDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) %></td>
+                    <td style="color:#e2e8f0;"><%= new Date(b.checkOutDate).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) %></td>
+                    <td style="color:#e2e8f0;"><%= b.numberOfNights %></td>
+                    <td style="color:#fbbf24;font-weight:700;">₹<%= b.totalPrice %></td>
+                    <td>
+                      <span class="badge px-3 py-2" style="border-radius:20px;font-size:0.75rem;
+                        background:<%= b.status==='confirmed'?'rgba(99,179,237,0.15)':b.status==='checked-in'?'rgba(104,211,145,0.15)':b.status==='checked-out'?'rgba(100,116,139,0.15)':b.status==='cancelled'?'rgba(252,129,129,0.15)':'rgba(251,191,36,0.15)' %>;
+                        color:<%= b.status==='confirmed'?'#63b3ed':b.status==='checked-in'?'#68d391':b.status==='checked-out'?'#94a3b8':b.status==='cancelled'?'#fc8181':'#fbbf24' %>;">
+                        <%= b.status.replace('-',' ').toUpperCase() %>
+                      </span>
+                    </td>
+                    <td class="pe-4">
+                      <div class="d-flex gap-1">
+                        <% if (b.status === 'pending' || b.status === 'confirmed') { %>
+                          <button class="btn btn-sm px-2" style="background:rgba(104,211,145,0.15);color:#68d391;border:1px solid rgba(104,211,145,0.3);border-radius:8px;"
+                            onclick="updateBookingStatus('<%= b._id %>','checked-in')">
+                            Check In
+                          </button>
+                        <% } %>
+                        <% if (b.status === 'checked-in') { %>
+                          <button class="btn btn-sm px-2" style="background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.3);border-radius:8px;"
+                            onclick="updateBookingStatus('<%= b._id %>','checked-out')">
+                            Check Out
+                          </button>
+                        <% } %>
+                        <% if (!['checked-out','cancelled'].includes(b.status)) { %>
+                          <button class="btn btn-sm px-2" style="background:rgba(252,129,129,0.15);color:#fc8181;border:1px solid rgba(252,129,129,0.3);border-radius:8px;"
+                            onclick="updateBookingStatus('<%= b._id %>','cancelled')">
+                            Cancel
+                          </button>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function filterBookings(status, btn) {
+      document.querySelectorAll('.d-flex.gap-2 .btn').forEach(b => b.className = 'btn btn-glass px-4');
+      btn.className = 'btn btn-gradient px-4';
+      document.querySelectorAll('.booking-row').forEach(row => {
+        row.style.display = (status === 'all' || row.dataset.status === status) ? '' : 'none';
+      });
+    }
+
+    async function updateBookingStatus(id, status) {
+      await fetch(`/api/bookings/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      location.reload();
+    }
+  </script>
+</body>
+</html>

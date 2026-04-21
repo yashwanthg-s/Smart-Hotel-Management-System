@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>User Analytics | Super Admin</title>
+  <%- include('../partials/admin-header') %>
+</head>
+<body class="fade-in">
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <%- include('../partials/admin-navbar') %>
+
+  <div class="container-fluid px-4 mt-4">
+    <div class="row">
+      <%- include('../partials/superadmin-sidebar', { currentPage: 'user-analytics' }) %>
+
+      <main class="col-md-10 py-2">
+        <div class="mb-5 ps-3">
+          <h1 class="display-6">User Analytics</h1>
+          <p class="text-secondary">Detailed breakdown of users, orders and activity per hotel</p>
+        </div>
+
+        <!-- Top Summary Cards -->
+        <div class="row g-4 mb-5 ps-3">
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center">
+              <div class="glass rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 text-info"
+                style="width:56px;height:56px;font-size:1.4rem;">
+                <i class="fas fa-users"></i>
+              </div>
+              <h2 class="fw-bold mb-0" style="color:#68d391;"><%= totalUsers %></h2>
+              <p class="text-secondary small mb-0">Total Users</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center">
+              <div class="glass rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 text-warning"
+                style="width:56px;height:56px;font-size:1.4rem;">
+                <i class="fas fa-shopping-bag"></i>
+              </div>
+              <h2 class="fw-bold mb-0" style="color:#68d391;"><%= usersWhoOrdered %></h2>
+              <p class="text-secondary small mb-0">Users Who Ordered</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center">
+              <div class="glass rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 text-success"
+                style="width:56px;height:56px;font-size:1.4rem;">
+                <i class="fas fa-star"></i>
+              </div>
+              <h2 class="fw-bold mb-0" style="color:#68d391;"><%= usersWhoRated %></h2>
+              <p class="text-secondary small mb-0">Users Who Rated</p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="glass-card p-4 text-center">
+              <div class="glass rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3 text-danger"
+                style="width:56px;height:56px;font-size:1.4rem;">
+                <i class="fas fa-user-slash"></i>
+              </div>
+              <h2 class="fw-bold mb-0" style="color:#fc8181;"><%= totalUsers - usersWhoOrdered %></h2>
+              <p class="text-secondary small mb-0">Never Ordered</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row g-4 mb-5 ps-3">
+          <!-- Daily Users Who Ordered Line Chart -->
+          <div class="col-md-8">
+            <div class="glass-card p-4">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="fw-bold mb-0" style="color:#f1f5f9;">
+                  <i class="fas fa-chart-line text-info me-2"></i> Daily Active Users (Last 14 Days)
+                </h5>
+                <div class="d-flex gap-3">
+                  <span class="small"><span style="color:#63b3ed;">●</span> Users Who Ordered</span>
+                  <span class="small"><span style="color:#68d391;">●</span> Total Users</span>
+                </div>
+              </div>
+              <div style="height:280px;">
+                <canvas id="dailyUsersChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <!-- User Activity Doughnut -->
+          <div class="col-md-4">
+            <div class="glass-card p-4">
+              <h5 class="fw-bold mb-4" style="color:#f1f5f9;">
+                <i class="fas fa-chart-pie text-warning me-2"></i> User Activity
+              </h5>
+              <div style="height:280px;">
+                <canvas id="activityChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Per Hotel Breakdown -->
+        <div class="ps-3 mb-5">
+          <h5 class="fw-bold mb-4" style="color:#f1f5f9;">
+            <i class="fas fa-hotel text-info me-2"></i> Per Hotel Breakdown
+          </h5>
+          <div class="row g-4">
+            <% hotelBreakdown.forEach(h => { %>
+              <div class="col-md-6 col-lg-4">
+                <div class="glass-card p-4">
+                  <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                      <h6 class="fw-bold mb-0" style="color:#68d391;"><%= h.hotelName %></h6>
+                      <small class="text-secondary"><%= h.adminName %></small>
+                    </div>
+                    <span class="badge px-3 py-2" style="background:rgba(99,179,237,0.15);color:#63b3ed;border:1px solid rgba(99,179,237,0.3);border-radius:20px;">
+                      <%= h.totalOrders %> orders
+                    </span>
+                  </div>
+
+                  <!-- Stats Grid -->
+                  <div class="row g-2 mb-3">
+                    <div class="col-6">
+                      <div class="glass p-2 rounded-3 text-center">
+                        <div class="fw-bold" style="color:#68d391;font-size:1.2rem;"><%= h.uniqueUsers %></div>
+                        <div class="text-secondary" style="font-size:0.72rem;">Unique Users</div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="glass p-2 rounded-3 text-center">
+                        <div class="fw-bold" style="color:#fbbf24;font-size:1.2rem;">₹<%= h.revenue %></div>
+                        <div class="text-secondary" style="font-size:0.72rem;">Revenue</div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="glass p-2 rounded-3 text-center">
+                        <div class="fw-bold" style="color:#a78bfa;font-size:1.2rem;"><%= h.completedOrders %></div>
+                        <div class="text-secondary" style="font-size:0.72rem;">Completed</div>
+                      </div>
+                    </div>
+                    <div class="col-6">
+                      <div class="glass p-2 rounded-3 text-center">
+                        <div class="fw-bold" style="color:#f87171;font-size:1.2rem;"><%= h.avgRating > 0 ? h.avgRating.toFixed(1) : '—' %></div>
+                        <div class="text-secondary" style="font-size:0.72rem;">Avg Rating ⭐</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Order Progress Bar -->
+                  <div class="mb-1">
+                    <div class="d-flex justify-content-between mb-1">
+                      <span class="text-secondary" style="font-size:0.75rem;">Completion Rate</span>
+                      <span style="color:#68d391;font-size:0.75rem;">
+                        <%= h.totalOrders > 0 ? Math.round((h.completedOrders / h.totalOrders) * 100) : 0 %>%
+                      </span>
+                    </div>
+                    <div class="progress" style="height:5px;border-radius:10px;background:rgba(255,255,255,0.08);">
+                      <div class="progress-bar" style="width:<%= h.totalOrders > 0 ? Math.round((h.completedOrders / h.totalOrders) * 100) : 0 %>%;background:linear-gradient(90deg,#10b981,#68d391);border-radius:10px;"></div>
+                    </div>
+                  </div>
+
+                  <!-- Top Items -->
+                  <% if (h.topItems && h.topItems.length > 0) { %>
+                    <div class="mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.07);">
+                      <p class="text-secondary mb-2" style="font-size:0.75rem;">TOP ITEMS</p>
+                      <% h.topItems.forEach(item => { %>
+                        <div class="d-flex justify-content-between mb-1">
+                          <span style="color:#e2e8f0;font-size:0.82rem;"><%= item.name %></span>
+                          <span style="color:#68d391;font-size:0.82rem;"><%= item.count %> orders</span>
+                        </div>
+                      <% }); %>
+                    </div>
+                  <% } %>
+                </div>
+              </div>
+            <% }); %>
+          </div>
+        </div>
+
+        <!-- Top Users Table -->
+        <div class="glass-card overflow-hidden ps-0 ms-3 mb-5">
+          <div class="p-4 border-bottom border-white border-opacity-10">
+            <h5 class="fw-bold mb-0" style="color:#f1f5f9;">
+              <i class="fas fa-crown text-warning me-2"></i> Most Active Users
+            </h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-4" style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">#</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">User</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Total Orders</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Total Spent</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Avg Rating Given</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;text-transform:uppercase;">Last Order</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% topUsers.forEach((u, idx) => { %>
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.07);">
+                    <td class="ps-4">
+                      <span style="color:<%= idx===0?'#fbbf24':idx===1?'#94a3b8':idx===2?'#cd7f32':'#64748b' %>;font-weight:700;">
+                        <%= idx===0?'🥇':idx===1?'🥈':idx===2?'🥉':`#${idx+1}` %>
+                      </span>
+                    </td>
+                    <td>
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="glass rounded-circle d-flex align-items-center justify-content-center text-info"
+                          style="width:32px;height:32px;font-size:0.85rem;font-weight:700;">
+                          <%= u.name.charAt(0).toUpperCase() %>
+                        </div>
+                        <div>
+                          <div class="fw-bold" style="color:#68d391;font-size:0.88rem;"><%= u.name %></div>
+                          <div class="text-secondary" style="font-size:0.75rem;"><%= u.email %></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="badge px-3 py-2" style="background:rgba(99,179,237,0.15);color:#63b3ed;border-radius:20px;"><%= u.orderCount %></span></td>
+                    <td style="color:#fbbf24;font-weight:700;">₹<%= u.totalSpent %></td>
+                    <td>
+                      <% if (u.avgRating > 0) { %>
+                        <span style="color:#fbbf24;">
+                          ${'★'.repeat(Math.round(u.avgRating))}${'☆'.repeat(5-Math.round(u.avgRating))}
+                        </span>
+                        <span class="text-secondary small ms-1">(<%= u.avgRating.toFixed(1) %>)</span>
+                      <% } else { %>
+                        <span class="text-secondary small">No ratings</span>
+                      <% } %>
+                    </td>
+                    <td style="color:#94a3b8;font-size:0.82rem;">
+                      <%= u.lastOrder ? new Date(u.lastOrder).toLocaleDateString('en-IN',{day:'numeric',month:'short'}) : '—' %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <script>
+    Chart.defaults.color = 'rgba(255,255,255,0.5)';
+
+    // Daily Users Who Ordered Line Chart
+    new Chart(document.getElementById('dailyUsersChart'), {
+      type: 'line',
+      data: {
+        labels: <%- JSON.stringify(dailyLabels) %>,
+        datasets: [
+          {
+            label: 'Users Who Ordered',
+            data: <%- JSON.stringify(dailyOrderingUsers) %>,
+            borderColor: '#63b3ed',
+            backgroundColor: 'rgba(99,179,237,0.12)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#63b3ed',
+            pointRadius: 5,
+            pointHoverRadius: 8
+          },
+          {
+            label: 'Total Registered Users',
+            data: <%- JSON.stringify(dailyLabels.map(() => totalUsers)) %>,
+            borderColor: '#68d391',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            borderDash: [6, 4],
+            tension: 0,
+            pointRadius: 0,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15,23,42,0.9)',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            padding: 12,
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} users`
+            }
+          }
+        },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            beginAtZero: true,
+            ticks: { stepSize: 1 }
+          },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+
+    // Activity Doughnut
+    new Chart(document.getElementById('activityChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Ordered', 'Never Ordered', 'Rated'],
+        datasets: [{
+          data: [<%= usersWhoOrdered %>, <%= totalUsers - usersWhoOrdered %>, <%= usersWhoRated %>],
+          backgroundColor: ['#63b3ed','#fc8181','#fbbf24'],
+          borderWidth: 0, hoverOffset: 12
+        }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } }
+      }
+    });
+  </script>
+</body>
+</html>

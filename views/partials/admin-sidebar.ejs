@@ -1,0 +1,63 @@
+<nav class="col-md-2 d-md-block">
+  <div class="sidebar glass p-3 rounded-4 sidebar-wrapper">
+    <ul class="nav flex-column">
+      <!-- Overview — always visible -->
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'dashboard' ? 'active' : '' %>" href="/admin/dashboard">
+          <i class="fas fa-chart-pie"></i> Overview
+        </a>
+      </li>
+
+      <!-- Kitchen Menu — only if foodSystem enabled -->
+      <% const foodOn = user && user.hotelModules && user.hotelModules.foodSystem !== false; %>
+      <% const roomOn = user && user.hotelModules && user.hotelModules.roomBooking !== false; %>
+
+      <% if (foodOn) { %>
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'menu' ? 'active' : '' %>" href="/admin/menu">
+          <i class="fas fa-utensils"></i> Kitchen Menu
+        </a>
+      </li>
+      <% } %>
+
+      <!-- Room Status — only if roomBooking enabled -->
+      <% if (roomOn) { %>
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rooms' ? 'active' : '' %>" href="/admin/rooms">
+          <i class="fas fa-bed"></i> Room Status
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'bookings' ? 'active' : '' %>" href="/admin/bookings">
+          <i class="fas fa-calendar-check"></i> Room Bookings
+        </a>
+      </li>
+      <% } %>
+
+      <!-- Reservations (Tables) — only if foodSystem enabled -->
+      <% if (foodOn) { %>
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'tables' ? 'active' : '' %>" href="/admin/tables">
+          <i class="fas fa-chair"></i> Reservations
+        </a>
+      </li>
+      <% } %>
+
+      <!-- Live Orders — only if foodSystem enabled -->
+      <% if (foodOn) { %>
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'orders' ? 'active' : '' %>" href="/staff/orders">
+          <i class="fas fa-clipboard-list"></i> Live Orders
+        </a>
+      </li>
+      <% } %>
+
+      <!-- Team Members — always visible -->
+      <li class="nav-item">
+        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'staff' ? 'active' : '' %>" href="/admin/staff">
+          <i class="fas fa-user-friends"></i> Team Members
+        </a>
+      </li>
+    </ul>
+  </div>
+</nav>

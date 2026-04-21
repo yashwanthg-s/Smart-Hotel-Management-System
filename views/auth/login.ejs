@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Login | Smart Hotel</title>
+  <%- include('../partials/admin-header') %>
+</head>
+<body class="fade-in">
+  <!-- Animated Background -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="container container-fluid px-4">
+    <div class="row justify-content-center align-items-center min-vh-100">
+      <div class="col-md-5 col-lg-4">
+        <div class="text-center mb-5">
+           <i class="fas fa-hotel fs-1 text-info mb-3"></i>
+           <h2 class="display-6 fw-bold text-white">Welcome Back</h2>
+           <p class="text-secondary">Please enter your credentials to continue</p>
+        </div>
+
+        <div class="glass-card p-5">
+          <% if (typeof error !== 'undefined') { %>
+            <div class="alert glass text-danger border-danger border-opacity-25 mb-4" role="alert">
+              <i class="fas fa-exclamation-circle me-2"></i> <%= error %>
+            </div>
+          <% } %>
+
+          <form method="POST" action="/login">
+            <div class="mb-4">
+              <label class="form-label text-secondary small fw-bold">EMAIL ADDRESS</label>
+              <div class="input-group glass rounded-3">
+                <span class="input-group-text bg-transparent border-0 text-info px-3">
+                  <i class="fas fa-envelope"></i>
+                </span>
+                <input type="email" class="form-control bg-transparent border-0 text-white ps-0" name="email" required placeholder="name@example.com">
+              </div>
+            </div>
+
+            <div class="mb-5">
+              <label class="form-label text-secondary small fw-bold">PASSWORD</label>
+              <div class="input-group glass rounded-3">
+                <span class="input-group-text bg-transparent border-0 text-info px-3">
+                  <i class="fas fa-lock"></i>
+                </span>
+                <input type="password" class="form-control bg-transparent border-0 text-white ps-0" name="password" required placeholder="••••••••">
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-gradient w-100 py-3 rounded-3 shadow-lg mb-4">
+              Sign In <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+          </form>
+
+          <p class="text-center text-secondary small mb-0">
+            Don't have an account? <a href="/register" class="text-info text-decoration-none fw-bold">Register here</a>
+          </p>
+        </div>
+        
+        <div class="text-center mt-4">
+          <a href="/" class="text-secondary small text-decoration-none hover-white">
+            <i class="fas fa-arrow-left me-1"></i> Back to Homepage
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

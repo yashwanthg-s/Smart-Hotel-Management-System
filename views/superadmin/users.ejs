@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Users Management | Super Admin</title>
+  <%- include('../partials/admin-header') %>
+</head>
+<body class="fade-in">
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <%- include('../partials/admin-navbar') %>
+
+  <div class="container-fluid px-4 mt-4">
+    <div class="row">
+      <%- include('../partials/superadmin-sidebar', { currentPage: 'users' }) %>
+
+      <main class="col-md-10 py-2">
+        <div class="d-flex justify-content-between align-items-center mb-5 ps-3">
+          <div>
+            <h1 class="display-6">Users Management</h1>
+            <p class="text-secondary">All registered users across the platform</p>
+          </div>
+          <!-- Stats -->
+          <div class="d-flex gap-3">
+            <div class="glass-card px-4 py-2 text-center">
+              <div class="text-info fw-bold fs-4"><%= users.filter(u=>u.role==='user').length %></div>
+              <div class="text-secondary small">Customers</div>
+            </div>
+            <div class="glass-card px-4 py-2 text-center">
+              <div class="text-warning fw-bold fs-4"><%= users.filter(u=>u.role==='admin').length %></div>
+              <div class="text-secondary small">Admins</div>
+            </div>
+            <div class="glass-card px-4 py-2 text-center">
+              <div class="text-success fw-bold fs-4"><%= users.filter(u=>u.role==='staff').length %></div>
+              <div class="text-secondary small">Staff</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="d-flex gap-2 mb-4 ps-3">
+          <button class="btn btn-gradient px-4" onclick="filterRole('all', this)">All</button>
+          <button class="btn btn-glass px-4" onclick="filterRole('user', this)">Customers</button>
+          <button class="btn btn-glass px-4" onclick="filterRole('admin', this)">Admins</button>
+          <button class="btn btn-glass px-4" onclick="filterRole('staff', this)">Staff</button>
+        </div>
+
+        <!-- Users Table -->
+        <div class="glass-card overflow-hidden">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th class="ps-4" style="color:#94a3b8;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">User</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">Email</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">Phone</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">Role</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">Hotel</th>
+                  <th style="color:#94a3b8;font-size:0.78rem;letter-spacing:1px;text-transform:uppercase;">Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% users.forEach(u => { %>
+                  <tr class="user-row" data-role="<%= u.role %>" style="border-bottom:1px solid rgba(255,255,255,0.07);">
+                    <td class="ps-4">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="glass rounded-circle d-flex align-items-center justify-content-center text-info fw-bold"
+                          style="width:38px;height:38px;font-size:1rem;">
+                          <%= u.name.charAt(0).toUpperCase() %>
+                        </div>
+                        <span class="fw-bold" style="color:#68d391;"><%= u.name %></span>
+                      </div>
+                    </td>
+                    <td style="color:#94a3b8;font-size:0.88rem;"><%= u.email %></td>
+                    <td style="color:#68d391;font-size:0.88rem;"><%= u.phone || '—' %></td>
+                    <td>
+                      <span class="badge px-3 py-2" style="border-radius:20px;font-size:0.75rem;
+                        background:<%= u.role==='superadmin' ? 'rgba(239,68,68,0.15)' : u.role==='admin' ? 'rgba(251,191,36,0.15)' : u.role==='staff' ? 'rgba(16,185,129,0.15)' : 'rgba(99,179,237,0.15)' %>;
+                        color:<%= u.role==='superadmin' ? '#fc8181' : u.role==='admin' ? '#fbbf24' : u.role==='staff' ? '#68d391' : '#63b3ed' %>;
+                        border:1px solid <%= u.role==='superadmin' ? 'rgba(239,68,68,0.3)' : u.role==='admin' ? 'rgba(251,191,36,0.3)' : u.role==='staff' ? 'rgba(16,185,129,0.3)' : 'rgba(99,179,237,0.3)' %>;">
+                        <%= u.role.charAt(0).toUpperCase() + u.role.slice(1) %>
+                        <% if (u.department) { %> · <%= u.department %><% } %>
+                      </span>
+                    </td>
+                    <td style="color:#94a3b8;font-size:0.85rem;">
+                      <% if (u.hotelId && u.hotelId.name) { %>
+                        <i class="fas fa-hotel text-info me-1"></i><%= u.hotelId.name %>
+                      <% } else { %>
+                        <span class="text-secondary">—</span>
+                      <% } %>
+                    </td>
+                    <td style="color:#94a3b8;font-size:0.82rem;">
+                      <%= new Date(u.createdAt).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) %>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function filterRole(role, btn) {
+      document.querySelectorAll('.d-flex.gap-2 .btn').forEach(b => {
+        b.className = 'btn btn-glass px-4';
+      });
+      btn.className = 'btn btn-gradient px-4';
+
+      document.querySelectorAll('.user-row').forEach(row => {
+        row.style.display = (role === 'all' || row.dataset.role === role) ? '' : 'none';
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Housekeeping Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #f5f5f5; }
+    .top-nav { background: #1a6b3c; }
+    .req-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.2s; }
+    .req-card:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .status-pending { border-left: 4px solid #ffc107; }
+    .status-in_progress { border-left: 4px solid #17a2b8; }
+    .status-done { border-left: 4px solid #28a745; opacity: 0.7; }
+    .pulse { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  </style>
+</head>
+<body>
+  <nav class="navbar top-nav navbar-dark sticky-top">
+    <div class="container-fluid">
+      <span class="navbar-brand"><i class="fas fa-broom"></i> Housekeeping</span>
+      <span class="navbar-text text-white small">👤 <%= user.name %></span>
+      <a href="/logout" class="btn btn-sm btn-outline-light">Logout</a>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h4 class="mb-0"><i class="fas fa-tasks"></i> Service Requests</h4>
+        <small class="text-muted">Water, Cleaning, Napkins & more</small>
+      </div>
+      <button class="btn btn-sm btn-outline-dark" onclick="loadRequests()">
+        <i class="fas fa-sync-alt"></i> Refresh
+      </button>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-4">
+        <div class="card text-center border-0 bg-warning text-white" style="border-radius:10px;">
+          <div class="card-body py-2">
+            <div class="fs-3 fw-bold" id="pendingCount">0</div>
+            <div class="small">Pending</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card text-center border-0 bg-info text-white" style="border-radius:10px;">
+          <div class="card-body py-2">
+            <div class="fs-3 fw-bold" id="inProgressCount">0</div>
+            <div class="small">In Progress</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="card text-center border-0 bg-success text-white" style="border-radius:10px;">
+          <div class="card-body py-2">
+            <div class="fs-3 fw-bold" id="doneCount">0</div>
+            <div class="small">Done Today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Requests List -->
+    <div id="requestsList">
+      <div class="text-center py-5 text-muted">
+        <i class="fas fa-spinner fa-spin fa-2x mb-3 d-block"></i>
+        Loading requests...
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const hotelId = '<%= hotelId %>';
+
+    const typeLabels = {
+      water: '💧 Water', clean: '🧹 Clean Table',
+      extra_cutlery: '🍴 Extra Cutlery', napkins: '🧻 Napkins',
+      sauce: '🥫 Sauce/Condiments', custom: '✏️ Custom'
+    };
+
+    async function loadRequests() {
+      try {
+        const res = await fetch(`/api/service-requests?hotelId=${hotelId}`);
+        const data = await res.json();
+
+        const pending = data.filter(r => r.status === 'pending');
+        const inProgress = data.filter(r => r.status === 'in_progress');
+
+        // Also get done today
+        const doneRes = await fetch(`/api/service-requests/done?hotelId=${hotelId}`);
+        const doneData = await doneRes.json();
+
+        document.getElementById('pendingCount').textContent = pending.length;
+        document.getElementById('inProgressCount').textContent = inProgress.length;
+        document.getElementById('doneCount').textContent = doneData.length;
+
+        const list = document.getElementById('requestsList');
+
+        if (!data.length && !doneData.length) {
+          list.innerHTML = `<div class="text-center py-5 text-muted">
+            <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+            <p>All clear! No pending requests.</p></div>`;
+          return;
+        }
+
+        const allRequests = [...data, ...doneData];
+        list.innerHTML = allRequests.map(r => `
+          <div class="card req-card status-${r.status} mb-3">
+            <div class="card-body p-3">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="fw-bold mb-1">${typeLabels[r.type] || r.type}</h6>
+                  <p class="mb-1">
+                    <span class="badge bg-dark"><i class="fas fa-chair"></i> Table ${r.tableNumber}</span>
+                    ${r.customNote ? `<span class="text-muted small ms-2">"${r.customNote}"</span>` : ''}
+                  </p>
+                  <small class="text-muted">
+                    <i class="fas fa-clock"></i>
+                    ${new Date(r.createdAt).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'})}
+                    ${r.status === 'pending' ? '<span class="text-danger pulse ms-2">● New</span>' : ''}
+                  </small>
+                </div>
+                <div class="d-flex flex-column gap-1 align-items-end">
+                  <span class="badge bg-${r.status === 'pending' ? 'warning' : r.status === 'in_progress' ? 'info' : 'success'}">
+                    ${r.status === 'pending' ? '⏳ Pending' : r.status === 'in_progress' ? '🔄 In Progress' : '✅ Done'}
+                  </span>
+                  ${r.status === 'pending' ? `
+                    <button class="btn btn-sm btn-info text-white mt-1" onclick="updateReq('${r._id}','in_progress')">
+                      <i class="fas fa-play"></i> Start
+                    </button>` : ''}
+                  ${r.status === 'in_progress' ? `
+                    <button class="btn btn-sm btn-success mt-1" onclick="updateReq('${r._id}','done')">
+                      <i class="fas fa-check"></i> Done
+                    </button>` : ''}
+                </div>
+              </div>
+            </div>
+          </div>`).join('');
+      } catch (e) {
+        console.error(e);
+        document.getElementById('requestsList').innerHTML = '<div class="alert alert-danger">Error loading requests</div>';
+      }
+    }
+
+    async function updateReq(id, status) {
+      await fetch(`/api/service-requests/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      loadRequests();
+    }
+
+    loadRequests();
+    setInterval(loadRequests, 15000); // Auto-refresh every 15 seconds
+  </script>
+</body>
+</html>

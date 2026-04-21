@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waiter Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { background: #f5f5f5; }
+    .top-nav { background: #1a1a2e; padding: 12px 20px; }
+    .nav-tabs { border-bottom: 2px solid #dee2e6; background: white; padding: 0 20px; }
+    .nav-tabs .nav-link { color: #666; border: none; padding: 14px 20px; font-weight: 600; }
+    .nav-tabs .nav-link.active { color: #1a1a2e; border-bottom: 3px solid #1a1a2e; }
+    .nav-tabs .nav-link:hover { color: #1a1a2e; }
+
+    .table-card { border-radius: 14px; border: none; cursor: pointer; transition: all 0.2s; }
+    .table-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+    .status-available { background: linear-gradient(135deg,#d4edda,#c3e6cb); border-left: 4px solid #28a745; }
+    .status-occupied  { background: linear-gradient(135deg,#f8d7da,#f5c6cb); border-left: 4px solid #dc3545; }
+    .status-reserved  { background: linear-gradient(135deg,#fff3cd,#ffeeba); border-left: 4px solid #ffc107; }
+
+    .order-panel { position: fixed; top: 0; right: -480px; width: 460px; height: 100vh;
+      background: white; z-index: 1050; transition: right 0.35s;
+      display: flex; flex-direction: column; box-shadow: -4px 0 20px rgba(0,0,0,0.15); }
+    .order-panel.open { right: 0; }
+    .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1040; display: none; }
+    .panel-overlay.open { display: block; }
+    .panel-header { background: #1a1a2e; color: white; padding: 16px 20px; }
+    .panel-body { flex: 1; overflow-y: auto; padding: 16px; }
+    .panel-footer { padding: 14px 16px; border-top: 2px solid #f0f0f0; background: #fafafa; }
+
+    .menu-item-row { display: flex; justify-content: between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f5f5f5; }
+    .qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #1a1a2e;
+      background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .qty-btn:hover { background: #1a1a2e; color: white; }
+    .place-btn { width: 100%; padding: 13px; background: #ff6b35; color: white;
+      border: none; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    .place-btn:disabled { background: #ccc; }
+    .cat-pill { border-radius: 20px; padding: 5px 14px; font-size: 0.82rem;
+      border: 2px solid #dee2e6; background: white; cursor: pointer; margin: 2px; }
+    .cat-pill.active { background: #1a1a2e; color: white; border-color: #1a1a2e; }
+
+    .order-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  </style>
+</head>
+<body>
+  <nav class="navbar top-nav navbar-dark sticky-top">
+    <div class="container-fluid">
+      <span class="navbar-brand"><i class="fas fa-concierge-bell"></i> Waiter Panel</span>
+      <span class="navbar-text text-white small">👤 <%= user.name %></span>
+      <a href="/logout" class="btn btn-sm btn-outline-light">Logout</a>
+    </div>
+  </nav>
+
+  <!-- Tabs Navigation -->
+  <ul class="nav nav-tabs sticky-top" style="top:56px; z-index:999;">
+    <li class="nav-item">
+      <a class="nav-link active" data-bs-toggle="tab" href="#tablesTab">
+        <i class="fas fa-chair"></i> Tables
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#todayTab">
+        <i class="fas fa-clock"></i> Today's Orders
+        <span class="badge bg-primary ms-1"><%= todayOrders.length %></span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#serviceTab">
+        <i class="fas fa-bell"></i> Service
+        <span class="badge bg-danger ms-1" id="pendingServiceCount">0</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#historyTab">
+        <i class="fas fa-history"></i> History
+      </a>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- Tables Tab -->
+    <div class="tab-pane fade show active p-4" id="tablesTab">
+      <h5 class="mb-3"><i class="fas fa-chair"></i> Select a Table to Place Order</h5>
+      <div class="row g-3">
+        <% if (tables.length === 0) { %>
+          <div class="col-12 text-center py-5 text-muted">
+            <i class="fas fa-chair fa-3x mb-3 d-block"></i>
+            <p>No tables available</p>
+          </div>
+        <% } %>
+        <% tables.forEach(table => { %>
+          <div class="col-6 col-md-3 col-lg-2">
+            <div class="card table-card status-<%= table.status %> h-100"
+              onclick="selectTable('<%= table._id %>', '<%= table.tableNumber %>', '<%= table.status %>', <%= table.capacity %>)">
+              <div class="card-body p-3 text-center">
+                <div style="font-size:2rem;">
+                  <%= table.status === 'available' ? '🪑' : table.status === 'occupied' ? '🍽' : '🔖' %>
+                </div>
+                <h6 class="fw-bold mt-1 mb-0">Table <%= table.tableNumber %></h6>
+                <small class="text-muted"><i class="fas fa-users"></i> <%= table.capacity %></small><br>
+                <span class="badge mt-1 bg-<%= table.status === 'available' ? 'success' : table.status === 'occupied' ? 'danger' : 'warning' %> text-<%= table.status === 'reserved' ? 'dark' : 'white' %>">
+                  <%= table.status %>
+                </span>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- Today's Orders Tab -->
+    <div class="tab-pane fade p-4" id="todayTab">
+      <h5 class="mb-3"><i class="fas fa-clock"></i> Today's Orders</h5>
+      <% if (todayOrders.length === 0) { %>
+        <div class="text-center py-5 text-muted">
+          <i class="fas fa-receipt fa-3x mb-3 d-block opacity-25"></i>
+          <p>No orders placed today</p>
+        </div>
+      <% } %>
+      <div class="row g-3">
+        <% todayOrders.forEach(order => { %>
+          <% const statusColor = {pending:'warning',received:'info',preparing:'secondary',ready:'success',completed:'primary'}[order.status] || 'dark'; %>
+          <div class="col-md-6 col-lg-4">
+            <div class="card order-card">
+              <div class="card-body p-3">
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="fw-bold small"><%= order.orderId.slice(-12) %></span>
+                  <span class="badge bg-<%= statusColor %>"><%= order.status.toUpperCase() %></span>
+                </div>
+                <% if (order.roomNumber) { %>
+                  <p class="small mb-1"><i class="fas fa-chair"></i> <%= order.roomNumber %></p>
+                <% } %>
+                <ul class="list-unstyled mb-2">
+                  <% order.items.forEach(item => { %>
+                    <li class="small"><i class="fas fa-utensils text-muted me-1"></i><%= item.name %> × <%= item.quantity %></li>
+                  <% }); %>
+                </ul>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="fw-bold text-success">₹<%= order.totalPrice %></span>
+                  <span class="small text-muted"><%= new Date(order.createdAt).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}) %></span>
+                </div>
+                <% if (!order.qrUsed) { %>
+                  <button class="btn btn-sm btn-outline-dark w-100" onclick="showQR('<%= order.orderId %>', '<%= order.qrCode %>', '<%= order.status %>')">
+                    <i class="fas fa-qrcode"></i> Show QR Code
+                  </button>
+                <% } else { %>
+                  <div class="text-center"><span class="badge bg-secondary"><i class="fas fa-check-double"></i> Completed</span></div>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% }); %>
+      </div>
+    </div>
+
+    <!-- Service Tab -->
+    <div class="tab-pane fade p-4" id="serviceTab">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0"><i class="fas fa-bell"></i> Table Service</h5>
+        <button class="btn btn-sm btn-outline-dark" onclick="loadServiceRequests()">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+
+      <!-- Add Service Request -->
+      <div class="card border-0 shadow-sm mb-4" style="border-radius:12px;">
+        <div class="card-body p-3">
+          <h6 class="fw-bold mb-3"><i class="fas fa-plus-circle text-primary"></i> New Service Request</h6>
+          <div class="row g-2">
+            <div class="col-md-4">
+              <select class="form-select form-select-sm" id="serviceTable">
+                <option value="">Select Table</option>
+                <% tables.forEach(t => { %>
+                  <option value="<%= t._id %>" data-number="<%= t.tableNumber %>">Table <%= t.tableNumber %></option>
+                <% }); %>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <select class="form-select form-select-sm" id="serviceType">
+                <option value="water">💧 Water</option>
+                <option value="bill">🧾 Bill Request</option>
+                <option value="clean">🧹 Clean Table</option>
+                <option value="extra_cutlery">🍴 Extra Cutlery</option>
+                <option value="napkins">🧻 Napkins</option>
+                <option value="sauce">🥫 Sauce/Condiments</option>
+                <option value="custom">✏️ Custom</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <input type="text" class="form-control form-control-sm" id="serviceNote" placeholder="Custom note (optional)">
+            </div>
+            <div class="col-12">
+              <button class="btn btn-primary btn-sm" onclick="addServiceRequest()">
+                <i class="fas fa-plus"></i> Add Request
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Service Buttons -->
+      <div class="mb-4">
+        <p class="text-muted small mb-2">Quick Actions:</p>
+        <div class="d-flex flex-wrap gap-2" id="quickServiceBtns">
+          <% tables.forEach(t => { %>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-dark dropdown-toggle" data-bs-toggle="dropdown">
+                🪑 Table <%= t.tableNumber %>
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" onclick="quickService('<%= t._id %>','<%= t.tableNumber %>','water')">💧 Water</a></li>
+                <li><a class="dropdown-item" onclick="quickService('<%= t._id %>','<%= t.tableNumber %>','bill')">🧾 Bill</a></li>
+                <li><a class="dropdown-item" onclick="quickService('<%= t._id %>','<%= t.tableNumber %>','clean')">🧹 Clean</a></li>
+                <li><a class="dropdown-item" onclick="quickService('<%= t._id %>','<%= t.tableNumber %>','extra_cutlery')">🍴 Cutlery</a></li>
+                <li><a class="dropdown-item" onclick="quickService('<%= t._id %>','<%= t.tableNumber %>','napkins')">🧻 Napkins</a></li>
+              </ul>
+            </div>
+          <% }); %>
+        </div>
+      </div>
+
+      <!-- Service Requests List -->
+      <h6 class="fw-bold mb-3">Active Requests</h6>
+      <div id="serviceList">
+        <div class="text-center text-muted py-3">
+          <i class="fas fa-spinner fa-spin"></i> Loading...
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div class="tab-pane fade p-4" id="historyTab">
+      <h5 class="mb-3"><i class="fas fa-history"></i> Order History</h5>
+      <% if (historyOrders.length === 0) { %>
+        <div class="text-center py-5 text-muted">
+          <i class="fas fa-history fa-3x mb-3 d-block opacity-25"></i>
+          <p>No order history yet</p>
+        </div>
+      <% } %>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead class="table-dark">
+            <tr>
+              <th>Order ID</th>
+              <th>Table</th>
+              <th>Items</th>
+              <th>Total</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% historyOrders.forEach(order => { %>
+              <tr>
+                <td><small class="fw-bold"><%= order.orderId.slice(-12) %></small></td>
+                <td><%= order.roomNumber || 'N/A' %></td>
+                <td><%= order.items.length %> item(s)</td>
+                <td><strong>₹<%= order.totalPrice %></strong></td>
+                <td><small><%= new Date(order.createdAt).toLocaleDateString('en-IN') %></small></td>
+                <td><span class="badge bg-<%= order.status === 'completed' ? 'primary' : 'secondary' %>"><%= order.status %></span></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Panel Overlay -->
+  <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+
+  <!-- Order Panel (same as before) -->
+  <div class="order-panel" id="orderPanel">
+    <div class="panel-header">
+      <div>
+        <div class="fw-bold" id="panelTitle">Table Order</div>
+        <small id="panelSubtitle" class="opacity-75"></small>
+      </div>
+      <button onclick="closePanel()" style="background:none;border:none;color:white;font-size:1.2rem;">✕</button>
+    </div>
+    <div class="panel-body">
+      <div class="d-flex flex-wrap mb-3">
+        <button class="cat-pill active" onclick="filterCat('all',this)">All</button>
+        <button class="cat-pill" onclick="filterCat('appetizer',this)">Appetizer</button>
+        <button class="cat-pill" onclick="filterCat('main',this)">Main</button>
+        <button class="cat-pill" onclick="filterCat('dessert',this)">Dessert</button>
+        <button class="cat-pill" onclick="filterCat('beverage',this)">Beverage</button>
+        <button class="cat-pill" onclick="filterCat('snack',this)">Snack</button>
+      </div>
+      <div id="menuList"></div>
+      <div id="cartSection" style="display:none;">
+        <hr>
+        <h6 class="fw-bold mb-2"><i class="fas fa-shopping-cart"></i> Order Summary</h6>
+        <div id="cartList"></div>
+        <div class="d-flex justify-content-between mt-2 fw-bold">
+          <span>Total</span><span>₹<span id="cartTotal">0</span></span>
+        </div>
+        <div class="d-flex justify-content-between text-muted small mt-1">
+          <span><i class="fas fa-clock"></i> Prep Time</span><span><span id="cartPrep">0</span> min</span>
+        </div>
+        <div class="alert alert-info py-2 mt-2 small" id="etaInfo"></div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <select class="form-select form-select-sm mb-2" id="payMethod">
+        <option value="cash">💵 Cash</option>
+        <option value="card">💳 Card</option>
+        <option value="upi">📱 UPI</option>
+      </select>
+      <input type="text" class="form-control form-control-sm mb-2" id="orderNotes" placeholder="Special instructions...">
+      <button class="place-btn" id="placeBtn" onclick="placeOrder()" disabled>
+        <i class="fas fa-check-circle"></i> Place Order · ₹<span id="btnTotal">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content" style="border-radius:16px;">
+        <div class="modal-body text-center p-4">
+          <div class="text-success mb-2"><i class="fas fa-check-circle fa-3x"></i></div>
+          <h5 class="fw-bold">Order Placed!</h5>
+          <p class="small text-muted" id="successInfo"></p>
+          <img id="successQR" src="" class="img-fluid border rounded p-1 mb-2" style="max-width:150px;">
+          <p class="small text-muted">Show QR to kitchen staff</p>
+          <button class="btn btn-dark w-100" data-bs-dismiss="modal" onclick="location.reload()">
+            <i class="fas fa-redo"></i> Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const hotelId = '<%= hotelId %>';
+    let allMenuItems = [];
+    let cart = [];
+    let selectedTableId = null;
+    let selectedTableNumber = null;
+
+    async function loadMenu() {
+      try {
+        const res = await fetch(`/api/hotels/${hotelId}/menu`);
+        allMenuItems = await res.json();
+      } catch (e) { console.error(e); }
+    }
+    loadMenu();
+
+    function selectTable(tableId, tableNumber, status, capacity) {
+      selectedTableId = tableId;
+      selectedTableNumber = tableNumber;
+      cart = [];
+      document.getElementById('panelTitle').textContent = `Table ${tableNumber}`;
+      document.getElementById('panelSubtitle').textContent = `${capacity} seats · ${status}`;
+      document.getElementById('cartSection').style.display = 'none';
+      document.getElementById('placeBtn').disabled = true;
+      renderMenu('all');
+      document.getElementById('orderPanel').classList.add('open');
+      document.getElementById('panelOverlay').classList.add('open');
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      document.querySelector('.cat-pill').classList.add('active');
+    }
+
+    function closePanel() {
+      document.getElementById('orderPanel').classList.remove('open');
+      document.getElementById('panelOverlay').classList.remove('open');
+    }
+
+    function filterCat(cat, btn) {
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderMenu(cat);
+    }
+
+    function renderMenu(cat) {
+      const items = cat === 'all' ? allMenuItems : allMenuItems.filter(i => i.category === cat);
+      const list = document.getElementById('menuList');
+      if (items.length === 0) {
+        list.innerHTML = '<p class="text-muted text-center small py-3">No items</p>';
+        return;
+      }
+      list.innerHTML = items.map(item => {
+        const demand = item.activeOrders > 10 ? '🔴' : item.activeOrders > 5 ? '🟡' : '🟢';
+        const cartItem = cart.find(c => c.menuItemId === item._id);
+        const qty = cartItem ? cartItem.quantity : 0;
+        return `
+          <div class="menu-item-row">
+            <div style="flex:1;">
+              <div class="fw-bold" style="font-size:0.9rem;">${item.name}</div>
+              <div class="text-muted" style="font-size:0.78rem;">₹${item.price} · ${item.prepTime}min · ${demand}</div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button class="qty-btn" onclick="changeQty('${item._id}','${item.name}',${item.price},${item.prepTime},-1)">−</button>
+              <span class="fw-bold" id="qty-${item._id}" style="min-width:20px;text-align:center;">${qty}</span>
+              <button class="qty-btn" style="background:#1a1a2e;color:white;" onclick="changeQty('${item._id}','${item.name}',${item.price},${item.prepTime},1)">+</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function changeQty(id, name, price, prepTime, delta) {
+      const el = document.getElementById('qty-' + id);
+      let qty = parseInt(el.textContent) + delta;
+      if (qty < 0) qty = 0;
+      el.textContent = qty;
+      const idx = cart.findIndex(i => i.menuItemId === id);
+      if (qty === 0) { if (idx > -1) cart.splice(idx, 1); }
+      else if (idx > -1) { cart[idx].quantity = qty; }
+      else { cart.push({ menuItemId: id, name, price, quantity: qty, prepTime }); }
+      updateCart();
+    }
+
+    function updateCart() {
+      const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      const maxPrep = cart.length ? Math.max(...cart.map(i => i.prepTime)) : 0;
+      document.getElementById('cartTotal').textContent = total;
+      document.getElementById('cartPrep').textContent = maxPrep;
+      document.getElementById('btnTotal').textContent = total;
+      document.getElementById('placeBtn').disabled = cart.length === 0;
+
+      if (cart.length === 0) {
+        document.getElementById('cartSection').style.display = 'none';
+        return;
+      }
+      document.getElementById('cartSection').style.display = 'block';
+      document.getElementById('cartList').innerHTML = cart.map(item => `
+        <div class="d-flex justify-content-between py-1 border-bottom" style="font-size:0.88rem;">
+          <span>${item.name} × ${item.quantity}</span>
+          <span class="fw-bold">₹${item.price * item.quantity}</span>
+        </div>`).join('');
+
+      const readyTime = new Date(Date.now() + maxPrep * 60000).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'});
+      document.getElementById('etaInfo').innerHTML = `<i class="fas fa-clock"></i> Ready by <strong>${readyTime}</strong>`;
+    }
+
+    async function placeOrder() {
+      if (!cart.length) return;
+      const btn = document.getElementById('placeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Placing...';
+
+      const totalPrice = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotelId, items: cart, totalPrice,
+            paymentMethod: document.getElementById('payMethod').value,
+            notes: document.getElementById('orderNotes').value,
+            roomNumber: `Table-${selectedTableNumber}`
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          await fetch(`/admin/tables/${selectedTableId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'occupied' })
+          });
+
+          document.getElementById('successInfo').innerHTML = `Order ID: <b>${data.order.orderId}</b><br>Table: <b>${selectedTableNumber}</b>`;
+          document.getElementById('successQR').src = data.qrCode;
+          closePanel();
+          new bootstrap.Modal(document.getElementById('successModal')).show();
+        } else {
+          alert(data.error || 'Failed');
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fas fa-check-circle"></i> Place Order · ₹${totalPrice}`;
+        }
+      } catch (e) {
+        alert('Error');
+        btn.disabled = false;
+      }
+    }
+
+    function showQR(orderId, qrCode, status) {
+      const modal = document.createElement('div');
+      modal.className = 'modal fade';
+      modal.innerHTML = `
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+          <div class="modal-content" style="border-radius:16px;">
+            <div class="modal-header bg-dark text-white">
+              <h6 class="mb-0"><i class="fas fa-qrcode"></i> Order QR Code</h6>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+              <p class="small text-muted mb-1">Order ID</p>
+              <p class="fw-bold mb-2" style="font-size:0.8rem;">${orderId}</p>
+              <span class="badge bg-${status === 'ready' ? 'success' : 'warning'} mb-3">${status.toUpperCase()}</span>
+              ${qrCode ? `<div><img src="${qrCode}" class="img-fluid border rounded p-2" style="max-width:180px;"></div>` : '<p class="text-muted">QR not available</p>'}
+              <p class="small text-muted mt-3">Show to kitchen staff</p>
+            </div>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+      const m = new bootstrap.Modal(modal);
+      m.show();
+      modal.addEventListener('hidden.bs.modal', () => modal.remove());
+    }
+
+    // ===== SERVICE REQUESTS =====
+    const hotelIdForService = '<%= hotelId %>';
+
+    const serviceLabels = {
+      water: '💧 Water', bill: '🧾 Bill Request', clean: '🧹 Clean Table',
+      extra_cutlery: '🍴 Extra Cutlery', napkins: '🧻 Napkins',
+      sauce: '🥫 Sauce', custom: '✏️ Custom'
+    };
+
+    async function loadServiceRequests() {
+      try {
+        const res = await fetch(`/api/service-requests?hotelId=${hotelIdForService}`);
+        const data = await res.json();
+        renderServiceList(data);
+        const pending = data.filter(r => r.status === 'pending').length;
+        document.getElementById('pendingServiceCount').textContent = pending;
+        document.getElementById('pendingServiceCount').style.display = pending > 0 ? '' : 'none';
+      } catch (e) { console.error(e); }
+    }
+
+    function renderServiceList(requests) {
+      const list = document.getElementById('serviceList');
+      if (!requests.length) {
+        list.innerHTML = '<div class="text-center text-muted py-4"><i class="fas fa-check-circle fa-2x mb-2 d-block text-success"></i>No active service requests</div>';
+        return;
+      }
+      list.innerHTML = requests.map(r => `
+        <div class="card border-0 shadow-sm mb-2" style="border-radius:10px; border-left: 4px solid ${r.status === 'done' ? '#28a745' : r.status === 'in_progress' ? '#17a2b8' : '#ffc107'} !important;">
+          <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center">
+              <div>
+                <span class="fw-bold">${serviceLabels[r.type] || r.type}</span>
+                <span class="badge bg-dark ms-2">Table ${r.tableNumber}</span>
+                ${r.customNote ? `<span class="text-muted small ms-2">"${r.customNote}"</span>` : ''}
+                <br><small class="text-muted">${new Date(r.createdAt).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'})}</small>
+              </div>
+              <div class="d-flex gap-1">
+                ${r.status === 'pending' ? `
+                  <button class="btn btn-sm btn-info text-white" onclick="updateService('${r._id}','in_progress')">
+                    <i class="fas fa-play"></i>
+                  </button>` : ''}
+                ${r.status !== 'done' ? `
+                  <button class="btn btn-sm btn-success" onclick="updateService('${r._id}','done')">
+                    <i class="fas fa-check"></i>
+                  </button>` : `<span class="badge bg-success">Done</span>`}
+              </div>
+            </div>
+          </div>
+        </div>`).join('');
+    }
+
+    async function addServiceRequest() {
+      const tableEl = document.getElementById('serviceTable');
+      const tableId = tableEl.value;
+      const tableNumber = tableEl.options[tableEl.selectedIndex]?.dataset.number;
+      const type = document.getElementById('serviceType').value;
+      const customNote = document.getElementById('serviceNote').value;
+
+      if (!tableId) { alert('Please select a table'); return; }
+
+      try {
+        await fetch('/api/service-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hotelId: hotelIdForService, tableId, tableNumber, type, customNote })
+        });
+        document.getElementById('serviceNote').value = '';
+        loadServiceRequests();
+      } catch (e) { alert('Error adding request'); }
+    }
+
+    async function quickService(tableId, tableNumber, type) {
+      try {
+        await fetch('/api/service-requests', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hotelId: hotelIdForService, tableId, tableNumber, type })
+        });
+        // Switch to service tab
+        document.querySelector('[href="#serviceTab"]').click();
+        loadServiceRequests();
+      } catch (e) { alert('Error'); }
+    }
+
+    async function updateService(id, status) {
+      try {
+        await fetch(`/api/service-requests/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        loadServiceRequests();
+      } catch (e) { alert('Error'); }
+    }
+
+    // Load service requests when service tab is clicked
+    document.querySelector('[href="#serviceTab"]').addEventListener('click', loadServiceRequests);
+    // Initial load
+    loadServiceRequests();
+    // Auto-refresh every 20 seconds
+    setInterval(loadServiceRequests, 20000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= hotel.name %> - Order Food</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+
+  <style>
+    /* Page Specific Overrides */
+    .cart-btn {
+      position: relative;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border: none;
+      border-radius: 50px;
+      padding: 10px 24px;
+      font-weight: 600;
+      color: white;
+      transition: var(--transition);
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+    .cart-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+    }
+    .cart-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--accent-teal);
+      color: white;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--bg-dark);
+      font-weight: 700;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(20, 184, 166, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+    }
+
+    .hotel-hero {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 40px 0;
+      margin-bottom: 30px;
+    }
+
+    .cat-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      border-radius: 30px;
+      padding: 8px 20px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-right: 10px;
+      margin-bottom: 10px;
+      transition: var(--transition);
+    }
+    .cat-pill.active, .cat-pill:hover {
+      background: var(--accent-blue);
+      color: white;
+      border-color: var(--accent-blue);
+      box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .menu-card {
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--glass-bg);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--glass-border);
+      transition: var(--transition);
+      height: 100%;
+    }
+    .menu-card:hover {
+      transform: translateY(-8px);
+      border-color: var(--accent-blue);
+      box-shadow: 0 15px 45px rgba(0,0,0,0.4);
+    }
+    .menu-img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      transition: var(--transition);
+    }
+    .menu-card:hover .menu-img {
+      transform: scale(1.1);
+    }
+
+    .qty-controls {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 5px;
+      width: fit-content;
+      margin-top: 15px;
+    }
+    .qty-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: white;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .qty-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .qty-num {
+      width: 30px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    /* Cart Drawer Enhancement */
+    .cart-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+      z-index: 1050;
+      opacity: 0;
+      pointer-events: none;
+      transition: var(--transition);
+    }
+    .cart-overlay.open { opacity: 1; pointer-events: all; }
+
+    .cart-drawer {
+      position: fixed;
+      top: 0;
+      right: -450px;
+      width: 420px;
+      height: 100vh;
+      background: #0f172a;
+      border-left: 1px solid var(--glass-border);
+      z-index: 1060;
+      transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: -10px 0 50px rgba(0,0,0,0.5);
+    }
+    .cart-drawer.open { right: 0; }
+
+    .cart-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .cart-item-row {
+      padding: 16px;
+      border-bottom: 1px solid var(--glass-border);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .pay-btn {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--text-secondary);
+      border-radius: 12px;
+      padding: 12px;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .pay-btn.selected {
+      background: var(--accent-blue);
+      color: white;
+      border-color: var(--accent-blue);
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    }
+
+    .alert-ordering {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      text-align: center;
+      padding: 15px;
+      margin-bottom: 30px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    @media (max-width: 576px) {
+      .cart-drawer { width: 100vw; right: -100vw; }
+    }
+  </style>
+</head>
+<body class="fade-in">
+
+  <!-- Animated Background -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- Top Navigation -->
+  <nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container d-flex justify-content-between align-items-center">
+      <a href="/user/dashboard" class="btn btn-glass px-3">
+        <i class="fas fa-arrow-left me-2"></i> <span class="d-none d-sm-inline">Back</span>
+      </a>
+      
+      <div class="navbar-brand text-center m-0">
+        <i class="fas fa-hotel fs-4 me-2"></i>
+        <span><%= hotel.name %></span>
+      </div>
+
+      <button class="cart-btn" onclick="toggleCart()">
+        <i class="fas fa-shopping-basket me-2"></i> Cart
+        <span class="cart-badge" id="cartCount">0</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Hotel Hero Section -->
+  <div class="hotel-hero">
+    <div class="container text-center">
+      <h1 class="display-6 fw-bold mb-2"><%= hotel.name %></h1>
+      <p class="text-secondary mb-0">
+        <i class="fas fa-map-marker-alt text-info me-2"></i><%= hotel.address %>
+      </p>
+    </div>
+  </div>
+
+  <% if (!orderingEnabled) { %>
+    <div class="container mt-4">
+      <div class="alert-ordering">
+        <i class="fas fa-exclamation-triangle me-2"></i> 
+        Ordering is currently disabled by the hotel. Please stay tuned for updates.
+      </div>
+    </div>
+  <% } %>
+
+  <!-- Content -->
+  <div class="container mb-5">
+    <!-- Category Filter -->
+    <div class="d-flex flex-wrap justify-content-center mb-5">
+      <button class="cat-pill active" onclick="filterCat('all',this)">🍽 Every Dish</button>
+      <button class="cat-pill" onclick="filterCat('appetizer',this)">🥗 Starters</button>
+      <button class="cat-pill" onclick="filterCat('main',this)">🍛 Main Course</button>
+      <button class="cat-pill" onclick="filterCat('dessert',this)">🍰 Sweet Treats</button>
+      <button class="cat-pill" onclick="filterCat('beverage',this)">🥤 Refreshments</button>
+      <button class="cat-pill" onclick="filterCat('snack',this)">🍿 Appetizers</button>
+    </div>
+
+    <!-- Menu Grid -->
+    <% if (menuItems.length === 0) { %>
+      <div class="text-center py-5 glass-card mb-5">
+        <i class="fas fa-utensils fa-4x mb-4 text-white-50"></i>
+        <h3 class="text-secondary">Silence in the kitchen...</h3>
+        <p class="text-white-50">No culinary delights are listed yet.</p>
+      </div>
+    <% } %>
+
+    <div class="row g-4" id="menuGrid">
+      <% menuItems.forEach((item, index) => { %>
+        <% const demand = item.activeOrders > 10 ? 'high' : item.activeOrders > 5 ? 'medium' : 'low'; %>
+        <div class="col-6 col-md-4 col-lg-3 menu-col" data-category="<%= item.category %>" style="animation-delay: <%= index * 0.1 %>s">
+          <div class="menu-card d-flex flex-column" style="<%= !item.isAvailable ? 'opacity:0.55;' : '' %>">
+            <div class="position-relative overflow-hidden">
+              <% if (item.image) { %>
+                <img src="<%= item.image %>" class="menu-img" alt="<%= item.name %>"
+                  style="<%= !item.isAvailable ? 'filter:grayscale(80%);' : '' %>">
+              <% } else { %>
+                <div class="d-flex align-items-center justify-content-center bg-dark text-white-50" style="height:180px;">
+                  <i class="fas fa-utensils fa-3x"></i>
+                </div>
+              <% } %>
+              <span class="badge position-absolute top-0 start-0 m-3 glass shadow-lg">
+                <i class="fas fa-tags me-1 text-info"></i> <%= item.category %>
+              </span>
+              <% if (!item.isAvailable) { %>
+                <div class="position-absolute top-0 end-0 m-3">
+                  <span class="badge py-2 px-3" style="background:rgba(245,101,101,0.9);color:white;border-radius:20px;font-size:0.75rem;">
+                    <i class="fas fa-ban me-1"></i> Not Available
+                  </span>
+                </div>
+              <% } %>
+            </div>
+            
+            <div class="p-4 flex-grow-1 d-flex flex-column">
+              <h5 class="fw-bold mb-2"><%= item.name %></h5>
+              <p class="text-secondary small mb-3 flex-grow-1"><%= item.description || 'Experience the authentic taste of our expert preparation.' %></p>
+              
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fs-4 fw-bold text-info">₹<%= item.price %></span>
+                <span class="text-secondary small"><i class="far fa-clock me-1"></i> <%= item.prepTime %>m</span>
+              </div>
+
+              <div class="mb-3 d-flex align-items-center gap-2">
+                <% if (!item.isAvailable) { %>
+                  <span class="badge py-2 px-3" style="background:rgba(245,101,101,0.15);color:#fc8181;border:1px solid rgba(245,101,101,0.3);border-radius:20px;">
+                    <i class="fas fa-ban me-1"></i> Currently Unavailable
+                  </span>
+                <% } else if (demand === 'low') { %>
+                  <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-2">
+                    <i class="fas fa-chart-line me-1"></i> Quick Service
+                  </span>
+                <% } else if (demand === 'medium') { %>
+                  <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 py-2">
+                    <i class="fas fa-fire me-1"></i> Popular Pick
+                  </span>
+                <% } else { %>
+                  <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 py-2">
+                    <i class="fas fa-bolt me-1"></i> High Demand
+                  </span>
+                <% } %>
+                
+                <% if (item.isAvailable && item.stock <= 5 && item.stock > 0) { %>
+                  <span class="badge bg-danger bg-opacity-50 text-white py-2">Only <%= item.stock %> left!</span>
+                <% } %>
+              </div>
+
+              <!-- controls — disabled if not available -->
+              <% if (item.isAvailable) { %>
+                <div class="qty-controls mx-auto">
+                  <button class="qty-btn" onclick="changeQty('<%= item._id %>', -1, '<%= item.name %>', <%= item.price %>, <%= item.prepTime %>)">
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <div class="qty-num" id="qty-<%= item._id %>">0</div>
+                  <button class="qty-btn text-info" onclick="changeQty('<%= item._id %>', 1, '<%= item.name %>', <%= item.price %>, <%= item.prepTime %>)">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              <% } else { %>
+                <div class="text-center py-2" style="color:#64748b;font-size:0.82rem;">
+                  <i class="fas fa-clock me-1"></i> Check back later
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- Cart Overlay -->
+  <div class="cart-overlay" id="cartOverlay" onclick="toggleCart()"></div>
+
+  <!-- Cart Drawer -->
+  <div class="cart-drawer" id="cartDrawer">
+    <div class="cart-header">
+      <h4 class="mb-0 fw-bold"><i class="fas fa-shopping-basket text-info me-2"></i>Your Choices</h4>
+      <button class="btn btn-glass p-2 border-0" onclick="toggleCart()">
+        <i class="fas fa-times fs-5 text-secondary"></i>
+      </button>
+    </div>
+
+    <div class="flex-grow-1 overflow-auto" id="cartBody">
+      <div class="text-center py-5 mt-5">
+        <i class="fas fa-shopping-cart fa-4x mb-4 text-white-50 opacity-25"></i>
+        <h5 class="text-secondary">Your basket is waiting...</h5>
+        <p class="text-white-50 small">Add your favorite delicacies</p>
+      </div>
+    </div>
+
+    <div class="p-4 bg-dark bg-opacity-50 border-top border-white border-opacity-10">
+      <div class="d-flex justify-content-between mb-4">
+        <div class="text-secondary">
+          <p class="mb-0">Estimated Time</p>
+          <small class="text-info"><i class="far fa-clock me-1"></i> <span id="cartPrep">0</span> mins</small>
+        </div>
+        <div class="text-end">
+          <p class="mb-0 text-secondary">Grand Total</p>
+          <h3 class="fw-bold mb-0 text-white">₹<span id="cartTotal">0</span></h3>
+        </div>
+      </div>
+
+      <p class="fw-bold mb-2 small text-secondary px-1">Payment Selection</p>
+      <div class="d-flex gap-2 mb-4">
+        <button class="pay-btn selected" id="pay-card" onclick="selectPay('card')">
+          <i class="far fa-credit-card me-2"></i> Card
+        </button>
+        <button class="pay-btn" id="pay-upi" onclick="selectPay('upi')">
+          <i class="fas fa-mobile-alt me-2"></i> UPI
+        </button>
+      </div>
+
+      <div class="input-group mb-4 glass rounded-3">
+        <span class="input-group-text bg-transparent border-0 text-secondary">
+          <i class="far fa-comment-dots"></i>
+        </span>
+        <input type="text" class="form-control bg-transparent border-0 py-2 ps-0" id="orderNotes" placeholder="Any special cooking requests?">
+      </div>
+
+      <div id="cartError" class="alert alert-danger py-3 border-0 rounded-4 text-center mb-4" style="display:none; background: rgba(220, 53, 69, 0.2);"></div>
+
+      <!-- ETA Smart Message -->
+      <div id="etaCartInfo" class="mb-3"></div>
+
+      <% if (!orderingEnabled) { %>
+        <button class="btn btn-secondary w-100 py-3 rounded-4 fw-bold opacity-50" disabled>
+          <i class="fas fa-clock me-2"></i> Kitchen Closed
+        </button>
+      <% } else { %>
+        <button class="btn-gradient w-100 py-3 rounded-4 fs-5" id="placeBtn" onclick="placeOrder()" disabled>
+          <i class="fas fa-check-circle me-2"></i> Confirm Selection · ₹<span id="btnTotal">0</span>
+        </button>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card border-0">
+        <div class="modal-body text-center p-5">
+          <div class="text-info mb-4">
+            <i class="fas fa-check-circle fa-5x"></i>
+          </div>
+          <h2 class="fw-bold text-white mb-2">Order Confirmed!</h2>
+          <p class="text-secondary mb-4" id="successId"></p>
+          
+          <div class="glass p-4 rounded-4 mb-4">
+            <img id="qrImg" src="" alt="Pass" class="img-fluid rounded-3 mb-3" style="max-width:200px; filter: invert(0);">
+            <p class="small text-white-50 mb-0">Show this QR pass at the collection point</p>
+          </div>
+          
+          <div class="d-flex align-items-center justify-content-center gap-3 mb-4">
+            <div class="glass px-3 py-2 rounded-3 text-info fw-bold">
+              <i class="fas fa-clock me-2"></i> <span id="successPrep"></span> min
+            </div>
+            <div class="text-secondary small">Estimated Preparation</div>
+          </div>
+
+          <button class="btn-gradient w-100 py-3 rounded-4" onclick="window.location.href='/user/dashboard'">
+            <i class="fas fa-home me-2"></i> Done, take me back
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/eta.js"></script>
+  <script>
+    const hotelId = '<%= hotel._id %>';
+    const hotelLat = <%= hotel.latitude %>;
+    const hotelLng = <%= hotel.longitude %>;
+    let cart = [];
+    let selectedPay = 'card';
+    let currentETA = null;
+
+    // Initialize ETA on page load
+    ETAModule.init().then(granted => {
+      if (granted) {
+        ETAModule.fetchETA(hotelLat, hotelLng).then(data => {
+          currentETA = data;
+          updateETADisplay();
+        });
+      } else {
+        document.getElementById('etaCartInfo').innerHTML =
+          `<div style="color:#64748b;font-size:0.75rem;"><i class="fas fa-location-slash me-1"></i> Enable location for ETA</div>`;
+      }
+    });
+
+    function updateETADisplay() {
+      const etaEl = document.getElementById('etaCartInfo');
+      if (!etaEl || !currentETA) return;
+      const maxPrep = cart.length ? Math.max(...cart.map(i => i.prepTime)) : 0;
+      etaEl.innerHTML = ETAModule.renderETABadge(currentETA, maxPrep > 0 ? maxPrep : null);
+    }
+
+    function toggleCart() {
+      document.getElementById('cartDrawer').classList.toggle('open');
+      document.getElementById('cartOverlay').classList.toggle('open');
+    }
+
+    function selectPay(method) {
+      selectedPay = method;
+      ['card','upi'].forEach(m => {
+        const btn = document.getElementById('pay-' + m);
+        if(btn) btn.classList.toggle('selected', m === method);
+      });
+    }
+
+    function filterCat(cat, btn) {
+      document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.menu-col').forEach(col => {
+        col.style.display = (cat === 'all' || col.dataset.category === cat) ? '' : 'none';
+      });
+    }
+
+    function changeQty(id, delta, name, price, prepTime) {
+      const el = document.getElementById('qty-' + id);
+      let qty = parseInt(el.textContent) + delta;
+      if (qty < 0) qty = 0;
+      el.textContent = qty;
+
+      const idx = cart.findIndex(i => i.menuItemId === id);
+      if (qty === 0) {
+        if (idx > -1) cart.splice(idx, 1);
+      } else if (idx > -1) {
+        cart[idx].quantity = qty;
+      } else {
+        cart.push({ menuItemId: id, name, price, quantity: qty, prepTime });
+      }
+      renderCart();
+    }
+
+    function renderCart() {
+      const body = document.getElementById('cartBody');
+      const errDiv = document.getElementById('cartError');
+      if (errDiv) errDiv.style.display = 'none';
+      const total = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      const maxPrep = cart.length ? Math.max(...cart.map(i => i.prepTime)) : 0;
+      const count = cart.reduce((s, i) => s + i.quantity, 0);
+
+      document.getElementById('cartCount').textContent = count;
+      document.getElementById('cartTotal').textContent = total;
+      document.getElementById('cartPrep').textContent = maxPrep;
+      document.getElementById('btnTotal').textContent = total;
+      document.getElementById('placeBtn').disabled = cart.length === 0;
+
+      // Update ETA smart message whenever cart changes
+      updateETADisplay();
+
+      if (cart.length === 0) {
+        body.innerHTML = `
+          <div class="text-center py-5 mt-5">
+            <i class="fas fa-shopping-cart fa-4x mb-4 text-white-50 opacity-25"></i>
+            <h5 class="text-secondary">Your basket is waiting...</h5>
+            <p class="text-white-50 small">Add your favorite delicacies</p>
+          </div>`;
+        return;
+      }
+
+      body.innerHTML = cart.map(item => `
+        <div class="cart-item-row d-flex justify-content-between align-items-center">
+          <div>
+            <h6 class="fw-bold text-white mb-1">${item.name}</h6>
+            <span class="text-secondary small">₹${item.price} × ${item.quantity}</span>
+          </div>
+          <div class="text-end d-flex align-items-center gap-3">
+            <span class="fw-bold text-info">₹${item.price * item.quantity}</span>
+            <button class="btn btn-sm btn-glass text-danger border-0 p-2" onclick="removeItem('${item.menuItemId}')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function removeItem(id) {
+      cart = cart.filter(i => i.menuItemId !== id);
+      const el = document.getElementById('qty-' + id);
+      if (el) el.textContent = '0';
+      renderCart();
+    }
+
+    async function placeOrder() {
+      if (!cart.length) return;
+      const btn = document.getElementById('placeBtn');
+      const errDiv = document.getElementById('cartError');
+      
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Securing Payment...';
+      errDiv.style.display = 'none';
+
+      const totalPrice = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+      const maxPrep = Math.max(...cart.map(i => i.prepTime));
+
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hotelId, items: cart, totalPrice,
+            paymentMethod: selectedPay,
+            notes: document.getElementById('orderNotes').value,
+            // Send ETA at order creation time so staff sees it immediately
+            userETA: currentETA ? currentETA.eta : null,
+            userDistance: currentETA ? currentETA.distance : null
+          })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById('successPrep').textContent = maxPrep;
+          document.getElementById('successId').textContent = 'Reference ID: ' + data.order.orderId;
+          document.getElementById('qrImg').src = data.qrCode;
+          toggleCart();
+          new bootstrap.Modal(document.getElementById('successModal')).show();
+          cart = [];
+          document.querySelectorAll('[id^="qty-"]').forEach(el => el.textContent = '0');
+          renderCart();
+        } else {
+          errDiv.textContent = data.error || 'The kitchen is having technical issues.';
+          errDiv.style.display = 'block';
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fas fa-check-circle me-2"></i> Confirm Selection · ₹${totalPrice}`;
+        }
+      } catch (e) {
+        console.error('Order error:', e);
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-check-circle me-2"></i> Try Again · ₹${totalPrice}`;
+      }
+    }
+  </script>
+</body>
+</html>

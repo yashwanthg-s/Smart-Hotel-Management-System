@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>User Dashboard | Smart Hotel</title>
+  <%- include('../partials/admin-header') %>
+  <style>
+    .user-nav-pills {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 100px;
+      padding: 8px;
+      display: inline-flex;
+      gap: 5px;
+      margin-bottom: 30px;
+    }
+    .user-nav-pills .nav-link {
+      color: rgba(255, 255, 255, 0.6);
+      border: none;
+      border-radius: 100px;
+      padding: 12px 24px;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    .user-nav-pills .nav-link.active {
+      background: var(--gradient-primary);
+      color: white;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    }
+    .user-nav-pills .nav-link:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+    }
+    
+    .hotel-card {
+      transition: var(--transition);
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+    .hotel-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.2); }
+  </style>
+</head>
+<body class="fade-in">
+  <!-- Animated Background -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <%- include('../partials/user-navbar') %>
+
+  <div class="container py-5">
+    <!-- Premium Tab Navigation -->
+    <div class="text-center mb-4">
+      <div class="user-nav-pills nav nav-pills" role="tablist">
+        <button class="nav-link active" id="hotels-tab" data-bs-toggle="pill" data-bs-target="#hotels" type="button" role="tab">
+          <i class="fas fa-hotel me-2"></i> Hotels
+        </button>
+        <button class="nav-link" id="rooms-tab" data-bs-toggle="pill" data-bs-target="#rooms" type="button" role="tab">
+          <i class="fas fa-bed me-2"></i> Book Rooms
+        </button>
+        <button class="nav-link" id="orders-tab" data-bs-toggle="pill" data-bs-target="#orders" type="button" role="tab">
+          <i class="fas fa-shopping-cart me-2"></i> My Orders
+        </button>
+        <button class="nav-link" id="profile-tab" data-bs-toggle="pill" data-bs-target="#profile" type="button" role="tab">
+          <i class="fas fa-user-circle me-2"></i> My Profile
+        </button>
+      </div>
+    </div>
+
+    <div class="tab-content">
+      <!-- Hotels Tab -->
+      <div class="tab-pane fade show active" id="hotels" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="display-6 fw-bold text-white mb-0">Experience Luxury</h2>
+          <span class="text-secondary">Explore our partner hotels</span>
+        </div>
+        <!-- Search Bar -->
+        <div class="mb-4">
+          <div class="input-group" style="max-width:380px;">
+            <span class="input-group-text" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;border-right:none;">
+              <i class="fas fa-search"></i>
+            </span>
+            <input type="text" id="hotelSearchInput" class="form-control"
+              placeholder="Search hotels by name or address..."
+              style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-left:none;color:#e2e8f0;"
+              oninput="filterHotels(this.value)">
+          </div>
+        </div>
+        <div class="row g-4" id="hotelsList"></div>
+      </div>
+
+      <!-- Rooms Tab -->
+      <div class="tab-pane fade" id="rooms" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="display-6 fw-bold text-white mb-0">Find Your Stay</h2>
+        </div>
+        <!-- Search Bar for Rooms -->
+        <div class="mb-4">
+          <div class="input-group" style="max-width:380px;">
+            <span class="input-group-text" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:#94a3b8;border-right:none;">
+              <i class="fas fa-search"></i>
+            </span>
+            <input type="text" id="roomHotelSearch" class="form-control"
+              placeholder="Search hotels for rooms..."
+              style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-left:none;color:#e2e8f0;"
+              oninput="filterRoomHotels(this.value)">
+          </div>
+        </div>
+        <!-- Hotel Cards for Room Booking -->
+        <div class="row g-4" id="roomHotelsList"></div>
+      </div>
+
+      <!-- Orders Tab -->
+      <div class="tab-pane fade" id="orders" role="tabpanel">
+        <!-- Food Orders -->
+        <h2 class="display-6 fw-bold text-white mb-4">Food Orders</h2>
+        <div id="ordersList" class="row g-4 mb-5"></div>
+
+        <!-- Room Bookings -->
+        <h2 class="display-6 fw-bold text-white mb-4"><i class="fas fa-bed me-2 text-info"></i>Room Bookings</h2>
+        <div id="roomBookingsList"></div>
+      </div>
+
+      <!-- Profile Tab -->
+      <div class="tab-pane fade" id="profile" role="tabpanel">
+        <h2 class="display-6 fw-bold text-white mb-5">Your Profile</h2>
+        <div class="row justify-content-center">
+          <div class="col-md-5">
+            <div class="glass-card p-4">
+
+              <!-- Avatar + Edit Button -->
+              <div class="text-center mb-4" style="position:relative;">
+                <div class="glass rounded-circle text-info d-flex align-items-center justify-content-center mx-auto"
+                  style="width:90px;height:90px;font-size:2.2rem;border:3px solid rgba(255,255,255,0.15);position:relative;">
+                  <%= user.name.charAt(0).toUpperCase() %>
+                </div>
+                <button onclick="toggleEdit()" id="editToggleBtn"
+                  style="position:absolute;top:0;right:calc(50% - 60px);background:rgba(99,179,237,0.2);border:1px solid rgba(99,179,237,0.4);color:#63b3ed;border-radius:50%;width:30px;height:30px;cursor:pointer;display:flex;align-items:center;justify-content:center;"
+                  title="Edit Profile">
+                  <i class="fas fa-pencil-alt" style="font-size:0.75rem;"></i>
+                </button>
+                <h4 class="text-white fw-bold mt-3 mb-0" id="displayName"><%= user.name %></h4>
+                <span class="text-info small text-capitalize"><%= user.role %></span>
+              </div>
+
+              <!-- View Mode -->
+              <div id="viewMode">
+                <div class="d-flex align-items-center gap-3 py-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+                  <i class="fas fa-envelope text-info"></i>
+                  <span class="text-white-50" id="displayEmail"><%= user.email %></span>
+                </div>
+                <div class="d-flex align-items-center gap-3 py-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+                  <i class="fas fa-phone text-info"></i>
+                  <span class="text-white-50" id="displayPhone"><%= user.phone || 'Not provided — click ✏️ to add' %></span>
+                </div>
+              </div>
+
+              <!-- Edit Mode (hidden by default) -->
+              <div id="editMode" style="display:none;">
+                <div id="profileMsg"></div>
+                <div class="mb-3 mt-3">
+                  <label class="form-label text-secondary small fw-bold">FULL NAME</label>
+                  <div class="input-group glass rounded-3">
+                    <span class="input-group-text bg-transparent border-0 text-info px-3"><i class="fas fa-user"></i></span>
+                    <input type="text" class="form-control bg-transparent border-0 text-white ps-0"
+                      id="editName" value="<%= user.name %>" placeholder="Full Name">
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-secondary small fw-bold">PHONE NUMBER</label>
+                  <div class="input-group glass rounded-3">
+                    <span class="input-group-text bg-transparent border-0 text-info px-3"><i class="fas fa-phone"></i></span>
+                    <input type="tel" class="form-control bg-transparent border-0 text-white ps-0"
+                      id="editPhone" value="<%= user.phone || '' %>" placeholder="e.g. 9876543210">
+                  </div>
+                </div>
+                <div class="d-flex gap-2">
+                  <button class="btn btn-gradient flex-grow-1 py-2" onclick="saveProfile()">
+                    <i class="fas fa-save me-2"></i> Save Changes
+                  </button>
+                  <button class="btn btn-glass px-4" onclick="toggleEdit()">Cancel</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Complaint Modal -->
+  <div class="modal fade" id="complaintModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card overflow-hidden">
+        <div class="modal-header bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <h5 class="modal-title fw-bold text-white"><i class="fas fa-exclamation-circle text-danger me-2"></i> Submit Complaint</h5>
+          <button type="button" class="btn btn-glass p-2 border-0" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body p-4">
+          <div id="complaintMsg"></div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small fw-bold">CATEGORY</label>
+            <select class="form-select" id="complaintCategory">
+              <option value="food_quality">🍽 Food Quality</option>
+              <option value="service">🛎 Service</option>
+              <option value="cleanliness">🧹 Cleanliness</option>
+              <option value="billing">💳 Billing</option>
+              <option value="staff">👤 Staff Behavior</option>
+              <option value="other">📝 Other</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small fw-bold">SUBJECT</label>
+            <input type="text" class="form-control" id="complaintSubject" placeholder="Brief subject...">
+          </div>
+          <div class="mb-3">
+            <label class="form-label text-secondary small fw-bold">MESSAGE</label>
+            <textarea class="form-control" id="complaintMessage" rows="4" placeholder="Describe your complaint..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <button type="button" class="btn btn-glass px-4" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-gradient px-4" onclick="submitComplaint()">
+            <i class="fas fa-paper-plane me-2"></i> Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="foodOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content glass-card overflow-hidden">
+        <div class="modal-header bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <h5 class="modal-title fw-bold text-white"><i class="fas fa-utensils text-info me-2"></i> Order Fresh Food</h5>
+          <button type="button" class="btn btn-glass p-2 border-0" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+          <div id="menuItems" class="row g-3"></div>
+          
+          <div class="mt-5 border-top border-white border-opacity-10 pt-4">
+            <h5 class="text-white fw-bold mb-3"><i class="fas fa-shopping-basket text-info me-2"></i> Your Selection</h5>
+            <div id="cartItems" class="glass-card bg-opacity-10 p-3 mb-4"></div>
+            <div class="row align-items-center">
+              <div class="col-md-6 text-secondary small">
+                <p class="mb-1">Total: <span class="text-white fw-bold fs-5">₹<span id="totalPrice">0</span></span></p>
+                <p class="mb-0">Estimated Prep: <span class="text-info"><span id="prepTime">0</span> minutes</span></p>
+              </div>
+              <div class="col-md-6 text-end">
+                <button type="button" class="btn btn-gradient px-5" onclick="placeOrder()">Place Order</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/main.js"></script>
+  <script src="/js/eta.js"></script>
+  <script src="/js/user-dashboard.js"></script>
+  <script>
+    function toggleEdit() {
+      const view = document.getElementById('viewMode');
+      const edit = document.getElementById('editMode');
+      const isEditing = edit.style.display !== 'none';
+      view.style.display = isEditing ? 'block' : 'none';
+      edit.style.display = isEditing ? 'none' : 'block';
+      document.getElementById('editToggleBtn').innerHTML =
+        isEditing ? '<i class="fas fa-pencil-alt" style="font-size:0.75rem;"></i>'
+                  : '<i class="fas fa-times" style="font-size:0.75rem;"></i>';
+    }
+
+    async function submitComplaint() {
+      const subject = document.getElementById('complaintSubject').value.trim();
+      const message = document.getElementById('complaintMessage').value.trim();
+      const category = document.getElementById('complaintCategory').value;
+      const msgDiv = document.getElementById('complaintMsg');
+
+      if (!subject || !message) {
+        msgDiv.innerHTML = `<div class="alert glass text-danger border border-danger border-opacity-25 py-2 mb-3 small">Please fill subject and message</div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/complaints', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subject, message, category })
+        });
+        const data = await res.json();
+        if (data.success) {
+          msgDiv.innerHTML = `<div class="alert glass text-success border border-success border-opacity-25 py-2 mb-3 small">
+            <i class="fas fa-check-circle me-1"></i> Complaint submitted! We'll review it shortly.
+          </div>`;
+          document.getElementById('complaintSubject').value = '';
+          document.getElementById('complaintMessage').value = '';
+          setTimeout(() => {
+            bootstrap.Modal.getInstance(document.getElementById('complaintModal'))?.hide();
+            msgDiv.innerHTML = '';
+          }, 2000);
+        }
+      } catch (e) {
+        msgDiv.innerHTML = `<div class="alert glass text-danger py-2 mb-3 small">Error submitting complaint</div>`;
+      }
+    }
+
+    async function saveProfile() {
+      const name = document.getElementById('editName').value.trim();
+      const phone = document.getElementById('editPhone').value.trim();
+      const msgDiv = document.getElementById('profileMsg');
+
+      if (!name) {
+        msgDiv.innerHTML = `<div class="alert glass text-danger border border-danger border-opacity-25 py-2 mb-3 small">Name is required</div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/user/update-profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          // Update display
+          document.getElementById('displayName').textContent = name;
+          document.getElementById('displayPhone').textContent = phone || 'Not provided — click ✏️ to add';
+          msgDiv.innerHTML = `<div class="alert glass text-success border border-success border-opacity-25 py-2 mb-3 small">
+            <i class="fas fa-check-circle me-1"></i> Profile updated!
+          </div>`;
+          setTimeout(() => { toggleEdit(); msgDiv.innerHTML = ''; }, 1500);
+        } else {
+          msgDiv.innerHTML = `<div class="alert glass text-danger border border-danger border-opacity-25 py-2 mb-3 small">${data.error}</div>`;
+        }
+      } catch (e) {
+        msgDiv.innerHTML = `<div class="alert glass text-danger py-2 mb-3 small">Error saving profile</div>`;
+      }
+    }
+  </script>
+
+  <!-- ===== CHATBOT (Modernized) ===== -->
+  <style>
+    .chat-fab {
+      position: fixed; bottom: 30px; right: 30px; z-index: 9999;
+      width: 65px; height: 65px; border-radius: 50%;
+      background: var(--gradient-primary);
+      color: white; border: none; font-size: 1.6rem;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.4);
+      cursor: pointer; transition: var(--transition);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .chat-fab:hover { transform: scale(1.1) rotate(5deg); box-shadow: 0 15px 35px rgba(37, 99, 235, 0.6); }
+    .chat-fab .notif-dot {
+      position: absolute; top: 18px; right: 18px;
+      width: 12px; height: 12px; background: #ef4444;
+      border-radius: 50%; border: 2px solid #0f172a;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.3)} }
+
+    .chat-window {
+      position: fixed; bottom: 110px; right: 30px; z-index: 9998;
+      width: 380px; height: 550px; border-radius: 24px;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      display: flex; flex-direction: column; overflow: hidden;
+      transform: translateY(20px) scale(0.95);
+      transition: all 0.4s cubic-bezier(.4, 0, .2, 1);
+      opacity: 0; pointer-events: none;
+    }
+    .chat-window.open {
+      transform: translateY(0) scale(1); opacity: 1; pointer-events: all;
+    }
+    .chat-head {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      color: white; padding: 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .chat-head .bot-info { display: flex; align-items: center; gap: 15px; }
+    .bot-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--gradient-primary);
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+      box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+    }
+    .online-dot { width: 10px; height: 10px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .chat-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 85%; padding: 12px 16px; border-radius: 20px; font-size: 0.95rem; line-height: 1.5; }
+    .msg.bot { background: rgba(255, 255, 255, 0.05); color: rgba(255,255,255,0.9); border-bottom-left-radius: 4px; align-self: flex-start; }
+    .msg.user { background: var(--gradient-primary); color: white; border-bottom-right-radius: 4px; align-self: flex-end; box-shadow: 0 4px 15px rgba(37, 99, 235, 0.2); }
+    .chat-input-area { padding: 15px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 10px; background: rgba(255, 255, 255, 0.02); }
+    .chat-input { flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 12px 18px; color: white; font-size: 0.95rem; outline: none; }
+    .chat-input:focus { border-color: #2563eb; background: rgba(255, 255, 255, 0.08); }
+    .send-btn { width: 48px; height: 48px; border-radius: 12px; background: var(--gradient-primary); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: var(--transition); }
+    .send-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); }
+    
+    .quick-btns { display: flex; overflow-x: auto; gap: 8px; padding: 0 20px 15px 20px; scrollbar-width: none; }
+    .quick-btns::-webkit-scrollbar { display: none; }
+    .quick-btn { font-size: 0.85rem; padding: 8px 16px; border-radius: 100px; border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.7); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .quick-btn:hover { background: rgba(255, 255, 255, 0.1); color: white; border-color: rgba(255,255,255,0.2); }
+  </style>
+
+  <button class="chat-fab" onclick="toggleChat()" id="chatFab">
+    <i class="fas fa-comment-dots" id="chatIcon"></i>
+    <span class="notif-dot" id="notifDot"></span>
+  </button>
+
+  <div class="chat-window" id="chatWindow">
+    <div class="chat-head">
+      <div class="bot-info">
+        <div class="bot-avatar"><i class="fas fa-robot"></i></div>
+        <div>
+          <div class="fw-bold">Smart Assistant</div>
+          <div style="font-size:0.75rem; color:#10b981;"><span class="online-dot"></span>Online</div>
+        </div>
+      </div>
+      <button onclick="toggleChat()" class="btn btn-glass btn-sm border-0 text-white"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="chat-body" id="chatBody"></div>
+
+    <div class="quick-btns" id="quickBtns">
+      <button class="quick-btn" onclick="sendQuick('🏨 Show Hotels')">Show Hotels</button>
+      <button class="quick-btn" onclick="sendQuick('🍽 Order Food')">Order Food</button>
+      <button class="quick-btn" onclick="sendQuick('🛏 Book Room')">Book Room</button>
+      <button class="quick-btn" onclick="sendQuick('📞 Contact')">Contact</button>
+    </div>
+
+    <div class="chat-input-area">
+      <input class="chat-input" id="chatInput" placeholder="How can I help you?" onkeypress="handleKey(event)">
+      <button class="send-btn" onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+    </div>
+  </div>
+
+  <script>
+    let chatOpen = false;
+    function toggleChat() {
+      chatOpen = !chatOpen;
+      document.getElementById('chatWindow').classList.toggle('open', chatOpen);
+      document.getElementById('chatIcon').className = chatOpen ? 'fas fa-chevron-down' : 'fas fa-comment-dots';
+      document.getElementById('notifDot').style.display = chatOpen ? 'none' : '';
+      if (chatOpen && document.getElementById('chatBody').children.length === 0) {
+        setTimeout(() => botSay("👋 Welcome to <b>Smart Hotel</b>! I'm your AI concierge. How can I assist with your stay today?"), 400);
+      }
+    }
+    function botSay(text, delay = 600) {
+      const body = document.getElementById('chatBody');
+      const typing = document.createElement('div');
+      typing.className = 'msg bot opacity-50';
+      typing.innerHTML = '<i class="fas fa-ellipsis-h fa-sm"></i>';
+      body.appendChild(typing);
+      body.scrollTop = body.scrollHeight;
+      setTimeout(() => {
+        typing.remove();
+        const msg = document.createElement('div');
+        msg.className = 'msg bot fade-in';
+        msg.innerHTML = text;
+        body.appendChild(msg);
+        body.scrollTop = body.scrollHeight;
+      }, delay);
+    }
+    function userSay(text) {
+      const body = document.getElementById('chatBody');
+      const msg = document.createElement('div');
+      msg.className = 'msg user fade-in';
+      msg.textContent = text;
+      body.appendChild(msg);
+      body.scrollTop = body.scrollHeight;
+    }
+    function sendQuick(text) { userSay(text); processMessage(text.toLowerCase()); }
+    function sendMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text) return;
+      userSay(text); input.value = ''; processMessage(text.toLowerCase());
+    }
+    function handleKey(e) { if (e.key === 'Enter') sendMessage(); }
+    function processMessage(text) {
+      if (text.includes('hotel')) botSay("🏨 We have several luxury hotels! You can explore them in the <b>Hotels</b> tab on your dashboard.");
+      else if (text.includes('food') || text.includes('order')) botSay("🍽 Hungry? Just click <b>Order Food</b> on any hotel card. Don't forget to track your order in the <b>My Orders</b> tab!");
+      else if (text.includes('room')) botSay("🛏 Ready for a stay? Head to the <b>Book Rooms</b> tab, choose your dates, and we'll find the best suite for you!");
+      else if (text.includes('contact') || text.includes('help')) botSay("📞 Need a hand? Our support team is online 24/7. You can call the front desk at <b>+1 (800) SMART-HOTEL</b>.");
+      else if (text.includes('hi') || text.includes('hello')) botSay("👋 Hello! How can I make your stay better today?");
+      else botSay("✨ Interesting! I can help you with <b>Hotel lists</b>, <b>Food orders</b>, <b>Room bookings</b>, or <b>Support</b>. Which one would you like to know more about?");
+    }
+  </script>
+</body>
+</html>

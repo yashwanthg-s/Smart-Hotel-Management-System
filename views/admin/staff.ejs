@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Staff Management | Smart Hotel</title>
+  <%- include('../partials/admin-header') %>
+</head>
+<body class="fade-in">
+  <!-- Animated Background -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <%- include('../partials/admin-navbar') %>
+
+  <div class="container-fluid px-4 mt-4">
+    <div class="row">
+      <!-- Sidebar -->
+      <%- include('../partials/admin-sidebar', { currentPage: 'staff' }) %>
+
+      <!-- Main Content -->
+      <main class="col-md-10 py-2">
+        <div class="d-flex justify-content-between align-items-center mb-5 ps-3">
+          <div>
+            <h1 class="display-6">Team Members</h1>
+            <p class="text-secondary">Manage and organize your hotel operations team</p>
+          </div>
+          <button class="btn btn-gradient px-4" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+            <i class="fas fa-user-plus me-2"></i> Add Staff
+          </button>
+        </div>
+
+        <!-- Staff Grid -->
+        <div class="row g-4 ps-3">
+          <% if (staff.length === 0) { %>
+            <div class="col-12 text-center py-5">
+              <i class="fas fa-users-slash fa-3x mb-3 text-white-50 opacity-25"></i>
+              <p class="text-secondary">No team members joined yet</p>
+            </div>
+          <% } %>
+
+          <% staff.forEach(member => { %>
+            <div class="col-md-4 col-lg-3">
+              <div class="glass-card h-100 p-4 text-center">
+                <!-- Avatar -->
+                <div class="glass rounded-circle text-info d-flex align-items-center justify-content-center mx-auto mb-3"
+                  style="width: 80px; height: 80px; font-size: 2rem; border: 2px solid rgba(255,255,255,0.1);">
+                  <%= member.name.charAt(0).toUpperCase() %>
+                </div>
+                
+                <h5 class="fw-bold text-white mb-1"><%= member.name %></h5>
+                <p class="text-info small mb-3"><span class="badge glass px-3 py-2 text-capitalize"><%= member.department || 'General' %></span></p>
+                
+                <div class="mb-4 text-start">
+                  <p class="text-white-50 small mb-2"><i class="fas fa-envelope me-2"></i><%= member.email %></p>
+                  <p class="text-white-50 small mb-0"><i class="fas fa-phone me-2"></i><%= member.phone || 'N/A' %></p>
+                </div>
+
+                <div class="d-flex gap-2">
+                  <button class="btn btn-glass btn-sm flex-grow-1 text-warning"
+                    onclick="editStaff('<%= member._id %>', '<%= member.name %>', '<%= member.email %>', '<%= member.phone %>', '<%= member.department %>')">
+                    <i class="fas fa-edit me-1"></i> Edit
+                  </button>
+                  <button class="btn btn-glass btn-sm flex-grow-1 text-danger"
+                    onclick="deleteStaff('<%= member._id %>', '<%= member.name %>')">
+                    <i class="fas fa-trash me-1"></i> Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Add Staff Modal -->
+  <div class="modal fade" id="addStaffModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card overflow-hidden">
+        <div class="modal-header bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <h5 class="modal-title fw-bold text-white"><i class="fas fa-user-plus text-info me-2"></i> Add Staff Member</h5>
+          <button type="button" class="btn btn-glass p-2 border-0" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="POST" action="/admin/staff">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label class="form-label text-secondary small">Full Name</label>
+              <input type="text" class="form-control" name="name" required placeholder="e.g. John Doe">
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-secondary small">Email Address</label>
+              <input type="email" class="form-control" name="email" required placeholder="e.g. john@hotel.com">
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-secondary small">Password</label>
+                <input type="password" class="form-control" name="password" required minlength="6" placeholder="••••••••">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-secondary small">Phone Number</label>
+                <input type="tel" class="form-control" name="phone" placeholder="Optional">
+              </div>
+            </div>
+            <div class="mb-0">
+              <label class="form-label text-secondary small">Department</label>
+              <select class="form-select" name="department" required>
+                <option value="kitchen">🍳 Kitchen</option>
+                <option value="reception">🏨 Reception</option>
+                <option value="housekeeping">🧹 Housekeeping</option>
+                <option value="waiter">🧑‍🍳 Waiter</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+            <button type="button" class="btn btn-glass px-4" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-gradient px-4">Save Member</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Staff Modal -->
+  <div class="modal fade" id="editStaffModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content glass-card overflow-hidden">
+        <div class="modal-header bg-warning bg-opacity-25 border-white border-opacity-10 p-4">
+          <h5 class="modal-title fw-bold text-white"><i class="fas fa-edit text-warning me-2"></i> Edit Staff Member</h5>
+          <button type="button" class="btn btn-glass p-2 border-0" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="editStaffForm" method="POST">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label class="form-label text-secondary small">Full Name</label>
+              <input type="text" class="form-control" name="name" id="editName" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-secondary small">Phone Number</label>
+              <input type="tel" class="form-control" name="phone" id="editPhone">
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-secondary small">Department</label>
+              <select class="form-select" name="department" id="editDepartment">
+                <option value="kitchen">🍳 Kitchen</option>
+                <option value="reception">🏨 Reception</option>
+                <option value="housekeeping">🧹 Housekeeping</option>
+                <option value="waiter">🧑‍🍳 Waiter</option>
+              </select>
+            </div>
+            <div class="mb-0">
+              <label class="form-label text-secondary small">New Password <span class="opacity-50">(blank to keep current)</span></label>
+              <input type="password" class="form-control" name="password" minlength="6">
+            </div>
+          </div>
+          <div class="modal-footer bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+            <button type="button" class="btn btn-glass px-4" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-gradient px-4">Update Staff</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function editStaff(id, name, email, phone, department) {
+      document.getElementById('editName').value = name;
+      document.getElementById('editPhone').value = (phone && phone !== 'undefined') ? phone : '';
+      document.getElementById('editDepartment').value = department || 'kitchen';
+      document.getElementById('editStaffForm').action = '/admin/staff/' + id;
+      new bootstrap.Modal(document.getElementById('editStaffModal')).show();
+    }
+
+    function deleteStaff(id, name) {
+      if(confirm('Remove ' + name + ' from staff?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/staff/' + id + '/delete';
+        document.body.appendChild(form);
+        form.submit();
+      }
+    }
+  </script>
+</body>
+</html>

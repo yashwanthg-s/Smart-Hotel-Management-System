@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Admin Dashboard | Smart Hotel</title>
+  <%- include('../partials/admin-header') %>
+  <style>
+    /* Page-specific overrides */
+    .list-group-item {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--glass-border);
+      color: var(--text-primary);
+      padding: 15px 0;
+    }
+    .list-group-item:last-child { border: none; }
+  </style>
+</head>
+<body class="fade-in">
+  <!-- Animated Background -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <%- include('../partials/admin-navbar') %>
+
+  <div class="container-fluid px-4 mt-4">
+    <div class="row">
+      <!-- Sidebar -->
+      <%- include('../partials/admin-sidebar', { currentPage: 'dashboard' }) %>
+
+      <!-- Main content -->
+      <main class="col-md-10 py-2">
+        <div class="d-flex justify-content-between align-items-center mb-5 ps-3">
+          <div>
+            <h1 class="display-6"><%= hotel.name %></h1>
+            <p class="text-secondary"><i class="fas fa-map-marker-alt me-2 text-info"></i><%= hotel.address %></p>
+          </div>
+          
+          <div class="glass-card p-3 d-flex align-items-center gap-4">
+            <div class="text-end">
+              <p class="mb-0 small text-secondary">Ordering Status</p>
+              <h6 class="mb-0 text-white-50" id="orderStatusText"><%= orderingEnabled ? 'Accepting Requests' : 'Kitchen Closed' %></h6>
+            </div>
+            <div class="ordering-toggle <%= orderingEnabled ? 'active' : '' %>" onclick="toggleOrdering()" id="orderingToggle">
+              <div class="toggle-knob" id="toggleKnob"></div>
+              <span class="toggle-label" id="toggleLabel"><%= orderingEnabled ? 'ON' : 'OFF' %></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Analytics Cards -->
+        <div class="row g-4 mb-5 text-start">
+          <div class="col-md-3">
+            <div class="card stat-card border-info border-opacity-25" style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#ordersModal">
+              <div class="card-body">
+                <div class="stat-icon text-info"><i class="fas fa-shopping-basket"></i></div>
+                <h6 class="text-secondary mb-1">Orders Today</h6>
+                <p class="display-6 fw-bold mb-0 text-info"><%= ordersToday %></p>
+                <small class="text-white-50 mt-2 d-block"><i class="fas fa-external-link-alt me-1"></i> View Details</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card border-success border-opacity-25">
+              <div class="card-body">
+                <div class="stat-icon text-success"><i class="fas fa-wallet"></i></div>
+                <h6 class="text-secondary mb-1">Total Revenue</h6>
+                <p class="display-6 fw-bold mb-0 text-success">₹<%= totalRevenue %></p>
+                <small class="text-white-50 mt-2 d-block"><i class="fas fa-arrow-up me-1"></i> +12% from yesterday</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card border-warning border-opacity-25">
+              <div class="card-body">
+                <div class="stat-icon text-warning"><i class="fas fa-utensils"></i></div>
+                <h6 class="text-secondary mb-1">Menu Items</h6>
+                <p class="display-6 fw-bold mb-0 text-warning"><%= topItems.length %></p>
+                <small class="text-white-50 mt-2 d-block"><i class="fas fa-plus me-1"></i> 3 New entries</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="card stat-card border-purple border-opacity-25">
+              <div class="card-body">
+                <div class="stat-icon text-purple" style="color:var(--accent-purple)"><i class="fas fa-users"></i></div>
+                <h6 class="text-secondary mb-1">Active Staff</h6>
+                <p class="display-6 fw-bold mb-0" style="color:var(--accent-purple)"><%= hotel.staff.length %></p>
+                <small class="text-white-50 mt-2 d-block"><i class="fas fa-user-check me-1"></i> All shifts filled</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-7">
+            <div class="glass-card p-4 h-100">
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="mb-0 fw-bold">🔥 Top Selling Items</h4>
+                <a href="/admin/menu" class="btn btn-glass btn-sm">Manage Menu</a>
+              </div>
+              <% if (topItems.length > 0) { %>
+                <div class="list-group">
+                  <% topItems.forEach(item => { %>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                      <div class="d-flex align-items-center gap-3">
+                        <div class="glass p-2 rounded-3 text-info"><i class="fas fa-utensils"></i></div>
+                        <div>
+                          <p class="mb-0 fw-bold text-white"><%= item.name %></p>
+                          <small class="text-secondary"><%= item.category %></small>
+                        </div>
+                      </div>
+                      <span class="badge glass text-info fs-6 px-3"><%= item.activeOrders %> orders</span>
+                    </div>
+                  <% }); %>
+                </div>
+              <% } else { %>
+                <div class="text-center py-5">
+                  <i class="fas fa-inbox fa-3x mb-3 opacity-25"></i>
+                  <p class="text-secondary">No food history yet</p>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <div class="col-md-5">
+            <div class="glass-card p-4 h-100">
+              <h4 class="mb-4 fw-bold">🏢 Hotel Identity</h4>
+              <div class="d-flex flex-column gap-3">
+                <div class="glass p-3 rounded-4">
+                  <label class="text-secondary small d-block mb-1">Address</label>
+                  <p class="mb-0 text-white"><%= hotel.address %></p>
+                </div>
+                <div class="row g-3">
+                  <div class="col-6">
+                    <div class="glass p-3 rounded-4">
+                      <label class="text-secondary small d-block mb-1">Contact</label>
+                      <p class="mb-0 text-white"><%= hotel.phone %></p>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div class="glass p-3 rounded-4">
+                      <label class="text-secondary small d-block mb-1">Coordinates</label>
+                      <p class="mb-0 small text-white"><%= hotel.latitude %>, <%= hotel.longitude %></p>
+                    </div>
+                  </div>
+                </div>
+                <div class="glass p-3 rounded-4">
+                  <label class="text-secondary small d-block mb-2">Available Modules</label>
+                  <div class="d-flex gap-2">
+                    <span class="badge <%= hotel.modules.foodSystem ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-danger bg-opacity-10 text-danger border border-danger' %> border-opacity-25 px-3 py-2">
+                      Food System
+                    </span>
+                    <span class="badge <%= hotel.modules.roomBooking ? 'bg-success bg-opacity-10 text-success border border-success' : 'bg-danger bg-opacity-10 text-danger border border-danger' %> border-opacity-25 px-3 py-2">
+                      Room Booking
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Orders Today Modal -->
+  <div class="modal fade" id="ordersModal" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content glass-card overflow-hidden">
+        <div class="modal-header bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <h4 class="modal-title fw-bold text-white"><i class="fas fa-shopping-bag text-info me-2"></i> Today's Successful Orders</h4>
+          <button type="button" class="btn btn-glass p-2 border-0" data-bs-dismiss="modal"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body p-0">
+          <% if (completedOrders.length === 0) { %>
+            <div class="text-center py-5">
+              <i class="fas fa-inbox fa-5x mb-4 text-white-50 opacity-25"></i>
+              <h4 class="text-secondary">No records found</h4>
+              <p class="text-white-50">Wait for guests to start ordering!</p>
+            </div>
+          <% } else { %>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0 px-4">
+                <thead>
+                  <tr>
+                    <th class="ps-4">Reference</th>
+                    <th>Guest Details</th>
+                    <th>Volume</th>
+                    <th>Revenue</th>
+                    <th>Timestamp</th>
+                    <th class="pe-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% completedOrders.forEach(order => { %>
+                    <tr>
+                      <td class="ps-4"><small style="color:#68d391;font-weight:700;">#<%= order.orderId %></small></td>
+                      <td style="color:#68d391;"><%= order.userId ? order.userId.name : 'Guest Customer' %></td>
+                      <td style="color:#68d391;"><%= order.items.length %> item(s)</td>
+                      <td class="fw-bold fs-6" style="color:#68d391;">₹<%= order.totalPrice %></td>
+                      <td>
+                        <small class="text-secondary"><%= new Date(order.createdAt).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'}) %></small>
+                      </td>
+                      <td class="pe-4"><span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3">Completed</span></td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+        <div class="modal-footer bg-dark bg-opacity-50 border-white border-opacity-10 p-4">
+          <div class="me-auto text-start">
+            <h5 class="mb-0 text-white-50 small">Consolidated Revenue Today</h5>
+            <h3 class="mb-0 text-success fw-bold">₹<%= totalRevenue %></h3>
+          </div>
+          <button type="button" class="btn btn-glass px-5" data-bs-dismiss="modal">Close Logs</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let orderingOn = <%= orderingEnabled ? 'true' : 'false' %>;
+
+    function toggleOrdering() {
+      fetch('/admin/toggle-ordering', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          orderingOn = data.orderingEnabled;
+          const toggle = document.getElementById('orderingToggle');
+          const label = document.getElementById('toggleLabel');
+          const statusText = document.getElementById('orderStatusText');
+
+          toggle.classList.toggle('active', orderingOn);
+          label.textContent = orderingOn ? 'ON' : 'OFF';
+          statusText.textContent = orderingOn ? 'Accepting Requests' : 'Kitchen Closed';
+
+          showToast(orderingOn ? '✅ Kitchen is now OPEN' : '🔴 Kitchen is now CLOSED',
+            orderingOn ? 'info' : 'danger');
+        });
+    }
+
+    function showToast(msg, type) {
+      const toast = document.createElement('div');
+      toast.className = `alert glass-${type} position-fixed fw-bold`;
+      toast.style.cssText = 'top:90px;right:20px;z-index:9999;min-width:300px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); backdrop-filter:blur(20px); background:rgba(15,23,42,0.8); color:white;';
+      toast.innerHTML = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        toast.style.transition = 'all 0.5s ease';
+        setTimeout(() => toast.remove(), 500);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

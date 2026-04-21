@@ -1,0 +1,47 @@
+<!-- Super Admin Sidebar -->
+<aside class="col-md-2 d-none d-md-block sidebar-container">
+  <div class="glass-sidebar h-100">
+    <div class="sidebar-header p-4">
+      <div class="d-flex align-items-center gap-2">
+        <div class="logo-circle">
+          <i class="fas fa-crown text-warning"></i>
+        </div>
+        <div>
+          <h6 class="mb-0 text-white fw-bold">Super Admin</h6>
+          <small class="text-secondary">Network Control</small>
+        </div>
+      </div>
+    </div>
+    
+    <nav class="sidebar-nav p-3">
+      <div class="nav flex-column gap-2">
+        <a href="/superadmin/hotels" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'hotels' ? 'active' : '' %>">
+          <i class="fas fa-hotel"></i>
+          <span>Hotels</span>
+        </a>
+        <a href="/superadmin/users" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'users' ? 'active' : '' %>">
+          <i class="fas fa-users"></i>
+          <span>Users</span>
+        </a>
+        <a href="/superadmin/analytics" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'analytics' ? 'active' : '' %>">
+          <i class="fas fa-chart-pie"></i>
+          <span>Analytics</span>
+        </a>
+        <a href="/superadmin/user-analytics" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'user-analytics' ? 'active' : '' %>">
+          <i class="fas fa-user-chart"></i>
+          <span>User Analytics</span>
+        </a>
+        <a href="/superadmin/complaints" class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'complaints' ? 'active' : '' %>">
+          <i class="fas fa-exclamation-circle"></i>
+          <span>Complaints</span>
+        </a>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer p-4 mt-auto">
+      <a href="/logout" class="btn btn-glass w-100 text-danger border-danger border-opacity-25">
+        <i class="fas fa-sign-out-alt me-2"></i> Logout
+      </a>
+    </div>
+  </div>
+</aside>
