@@ -28,7 +28,8 @@ app.use(session({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-hotel-management'
   }),
   cookie: { 
-    secure: false, // Set to true in production with HTTPS
+    secure: process.env.NODE_ENV === 'production', // HTTPS in production
+    httpOnly: true,
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
   }
 }));
