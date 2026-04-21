@@ -9,7 +9,12 @@ const cors = require('cors');
 const app = express();
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-hotel-management')
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-hotel-management', {
+  tls: true,
+  tlsAllowInvalidCertificates: false,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 45000
+})
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.error('MongoDB connection error:', err));
 
@@ -25,7 +30,11 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: new MongoStore({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-hotel-management'
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/smart-hotel-management',
+    mongoOptions: {
+      tls: true,
+      tlsAllowInvalidCertificates: false
+    }
   }),
   cookie: { 
     secure: process.env.NODE_ENV === 'production', // HTTPS in production
